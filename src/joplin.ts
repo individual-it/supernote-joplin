@@ -28,3 +28,15 @@ export async function createJoplinNotebookStructure(noteFile: string, destinatio
     return destinationNotebookId;
 }
 
+export async function writeNote(destinationNotebookId: string, noteFile: string, body: string): Promise<void> {
+    const title = path.basename(noteFile, '.note');
+    const notesInDestinationFolder = await joplin.data.get(['folders', destinationNotebookId, 'notes']);
+    const matchingNote = notesInDestinationFolder.items.find(
+        item => item.title === title
+    );
+    if (matchingNote) {
+        await joplin.data.put(['notes', matchingNote.id], null, {body: "updated", title: title});
+    } else {
+        await joplin.data.post(['notes'], null, {parent_id: destinationNotebookId, title: title});
+    }
+}

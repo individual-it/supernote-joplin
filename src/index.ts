@@ -6,7 +6,7 @@ import {SupernoteX, toImage} from "supernote-typescript";
 import path = require('path');
 import url = require('url');
 import querystring = require('querystring');
-import {createJoplinNotebookStructure} from "./joplin";
+import {createJoplinNotebookStructure, writeNote} from "./joplin";
 
 const registerSettings = async () => {
 	const sectionName = 'supernote';
@@ -78,10 +78,7 @@ joplin.plugins.register({
 
 		for (const noteFile of noteFiles) {
 			const destinationNotebookId = await createJoplinNotebookStructure(noteFile, destinationNotebook.id);
-			console.info(`Note ${noteFile} will be stored in Notebook ${destinationNotebookId}`);
-			const destinationFolderNotes = await joplin.data.get(['folders', destinationNotebookId, 'notes']);
-			console.info("Notes in that Notebook:")
-			console.info(destinationFolderNotes);
+			await writeNote(destinationNotebookId, noteFile, "")
 
 			const fullPath = path.join(supernoteNotesDirectory, noteFile);
 			console.info(`Reading note: ${fullPath}`);

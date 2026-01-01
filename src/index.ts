@@ -82,7 +82,9 @@ joplin.plugins.register({
             const sn = new SupernoteX(await readFileToUint8Array(path.join(supernoteNotesDirectory, noteFile)));
             let noteContent = "";
             for (const page of sn.pages) {
-                noteContent += page.paragraphs + "\n\n";
+                if (page.paragraphs.trim().length > 0) {
+                    noteContent += page.paragraphs + "\n\n";
+                }
             }
             for (const resource of await createResources(sn, tmpFolder, noteFile)) {
                 noteContent += `![${resource.title}](:/${resource.id})\n`;

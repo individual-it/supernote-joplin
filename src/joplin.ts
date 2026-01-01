@@ -35,8 +35,8 @@ export async function writeNote(destinationNotebookId: string, noteFile: string,
         item => item.title === title
     );
     if (matchingNote) {
-        await joplin.data.put(['notes', matchingNote.id], null, {body: "updated", title: title});
+        await joplin.data.put(['notes', matchingNote.id], null, {body, title});
     } else {
-        await joplin.data.post(['notes'], null, {parent_id: destinationNotebookId, title: title});
+        await joplin.data.post(['notes'], null, {parent_id: destinationNotebookId, body, title});
     }
 }

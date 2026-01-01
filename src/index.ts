@@ -78,12 +78,18 @@ joplin.plugins.register({
 
 		for (const noteFile of noteFiles) {
 			const destinationNotebookId = await createJoplinNotebookStructure(noteFile, destinationNotebook.id);
-			await writeNote(destinationNotebookId, noteFile, "")
+
 
 			const fullPath = path.join(supernoteNotesDirectory, noteFile);
 			console.info(`Reading note: ${fullPath}`);
 			let sn = new SupernoteX(await readFileToUint8Array(fullPath));
 			console.info(`In ${noteFile} there are ${sn.pages.length} pages!`);
+
+			let noteContent = "";
+			for (const page of sn.pages) {
+				noteContent += page.paragraphs + "\n\n";
+			}
+			await writeNote(destinationNotebookId, noteFile, noteContent)
 
 			let images = await toImage(sn)
 			console.info(images.length);

@@ -1,8 +1,8 @@
 import joplin from "../api";
-import path = require('path');
-import fs = require('fs');
 import * as imagejs from "image-js"
 import {SupernoteX, toImage} from "supernote-typescript";
+import path = require('path');
+import fs = require('fs');
 
 /**
  * creates the notebook structure in Joplin that is parallel to the folder structure of the .note files
@@ -31,12 +31,21 @@ export async function createJoplinNotebookStructure(noteFile: string, destinatio
     return destinationNotebookId;
 }
 
-export async function writeNote(destinationNotebookId: string, noteFile: string, body: string): Promise<void> {
+export async function findMatchingNote(destinationNotebookId: string, noteFile: string,): Promise<any> {
     const title = path.basename(noteFile, '.note');
     const notesInDestinationFolder = await joplin.data.get(['folders', destinationNotebookId, 'notes']);
     const matchingNote = notesInDestinationFolder.items.find(
         item => item.title === title
     );
+    if (matchingNote) {
+        return await joplin.data.get(['notes', matchingNote.id], { fields: ['id', 'title', 'updated_time'] });
+    }
+    return null;
+}
+
+export async function writeNote(destinationNotebookId: string, matchingNote, noteFile: string, body: string): Promise<void> {
+    const title = path.basename(noteFile, '.note');
+    const notesInDestinationFolder = await joplin.data.get(['folders', destinationNotebookId, 'notes']);
     if (matchingNote) {
         await joplin.data.put(['notes', matchingNote.id], null, {body, title});
     } else {

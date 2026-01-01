@@ -6,7 +6,7 @@ import path = require('path');
 import url = require('url');
 import os = require('os');
 import querystring = require('querystring');
-import {createJoplinNotebookStructure, createResources, writeNote} from "./joplin";
+import {createJoplinNotebookStructure, createResources, findMatchingNote, writeNote} from "./joplin";
 
 const registerSettings = async () => {
     const sectionName = 'supernote';
@@ -79,7 +79,15 @@ joplin.plugins.register({
         const tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'joplin-supernote-sync'));
         for (const noteFile of noteFiles) {
             const destinationNotebookId = await createJoplinNotebookStructure(noteFile, destinationNotebook.id);
-            const sn = new SupernoteX(await readFileToUint8Array(path.join(supernoteNotesDirectory, noteFile)));
+            const fullPathOfNoteFile = path.join(supernoteNotesDirectory, noteFile)
+            const statsNoteFile = fs.statSync(fullPathOfNoteFile);
+            const matchingNote = await findMatchingNote(destinationNotebookId, noteFile);
+
+            if (matchingNote && statsNoteFile.mtime.getTime() < matchingNote.updated_time) {
+                console.info(`skipping ${noteFile} as file mtime is ${statsNoteFile.mtime.getTime()} and note updated time: ${matchingNote.updated_time} `);
+                continue
+            }
+            const sn = new SupernoteX(await readFileToUint8Array(fullPathOfNoteFile));
             let noteContent = "";
             for (const page of sn.pages) {
                 if (page.paragraphs.trim().length > 0) {
@@ -89,10 +97,10 @@ joplin.plugins.register({
             for (const resource of await createResources(sn, tmpFolder, noteFile)) {
                 noteContent += `![${resource.title}](:/${resource.id})\n`;
             }
-            await writeNote(destinationNotebookId, noteFile, noteContent)
+            await writeNote(destinationNotebookId, matchingNote, noteFile, noteContent)
         }
         try {
-            fs.rmSync(tmpFolder, { recursive: true, force: true});
+            fs.rmSync(tmpFolder, {recursive: true, force: true});
         } catch (e) {
             console.error(e);
         }

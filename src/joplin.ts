@@ -53,7 +53,7 @@ export async function createResources(sn: SupernoteX, tmpFolder: string, noteFil
 
         const outputDirName = path.dirname(fullOutputPath);
         if (!fs.existsSync(outputDirName)) {
-            fs.mkdirSync(outputDirName, { recursive: true });
+            fs.mkdirSync(outputDirName, {recursive: true});
         }
         try {
             imagejs.writeSync(fullOutputPath, image)
@@ -63,7 +63,7 @@ export async function createResources(sn: SupernoteX, tmpFolder: string, noteFil
         const resource = await joplin.data.post(
             ["resources"],
             null,
-            { title: fileName }, // Resource metadata
+            {title: fileName}, // Resource metadata
             [
                 {
                     path: fullOutputPath, // Actual file

@@ -1,12 +1,12 @@
 import joplin from 'api';
 import fs = require('fs');
 import {SettingItemSubType, SettingItemType} from "../api/types";
-import * as imagejs from "image-js"
-import {SupernoteX, toImage} from "supernote-typescript";
+import {SupernoteX} from "supernote-typescript";
 import path = require('path');
 import url = require('url');
+import os = require('os');
 import querystring = require('querystring');
-import {createJoplinNotebookStructure, writeNote} from "./joplin";
+import {createJoplinNotebookStructure, createResources, writeNote} from "./joplin";
 
 const registerSettings = async () => {
 	const sectionName = 'supernote';
@@ -76,40 +76,19 @@ joplin.plugins.register({
 		console.info(`found ${noteFiles.length} files`);
 		console.info(noteFiles);
 
+		const tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'joplin-super-notebook'));
 		for (const noteFile of noteFiles) {
 			const destinationNotebookId = await createJoplinNotebookStructure(noteFile, destinationNotebook.id);
-
-
-			const fullPath = path.join(supernoteNotesDirectory, noteFile);
-			console.info(`Reading note: ${fullPath}`);
-			let sn = new SupernoteX(await readFileToUint8Array(fullPath));
-			console.info(`In ${noteFile} there are ${sn.pages.length} pages!`);
-
+			const sn = new SupernoteX(await readFileToUint8Array(path.join(supernoteNotesDirectory, noteFile)));
 			let noteContent = "";
 			for (const page of sn.pages) {
 				noteContent += page.paragraphs + "\n\n";
 			}
-			await writeNote(destinationNotebookId, noteFile, noteContent)
-
-			let images = await toImage(sn)
-			console.info(images.length);
-			const fullOutputPath = path.join(supernoteNotesDirectory, 'output', `${noteFile}-0.png`);
-
-			for await (const [index, image] of images.entries()) {
-				const fullOutputPath = path.join(supernoteNotesDirectory, 'output', `${noteFile}-${index}.png`)
-
-				const outputDirName = path.dirname(fullOutputPath);
-				if (!fs.existsSync(outputDirName)) {
-					fs.mkdirSync(outputDirName, { recursive: true });
-				}
-
-				try {
-					imagejs.writeSync(path.join(fullOutputPath,) , image)
-				} catch (e) {
-					console.error(e)
-				}
-
+			for (const resource of await createResources(sn, tmpFolder, noteFile)) {
+				noteContent += `![${resource.title}](:/${resource.id})\n`;
 			}
+			await writeNote(destinationNotebookId, noteFile, noteContent)
 		}
+		fs.rmdirSync(tmpFolder);
 	},
 });

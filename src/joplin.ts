@@ -1,5 +1,8 @@
 import joplin from "../api";
 import path = require('path');
+import fs = require('fs');
+import * as imagejs from "image-js"
+import {SupernoteX, toImage} from "supernote-typescript";
 
 /**
  * creates the notebook structure in Joplin that is parallel to the folder structure of the .note files
@@ -39,4 +42,36 @@ export async function writeNote(destinationNotebookId: string, noteFile: string,
     } else {
         await joplin.data.post(['notes'], null, {parent_id: destinationNotebookId, body, title});
     }
+}
+
+export async function createResources(sn: SupernoteX, tmpFolder: string, noteFile: string) {
+    let images = await toImage(sn)
+    const createdResources = [];
+    for await (const [index, image] of images.entries()) {
+        const fileName = `${noteFile}-${index}.png`;
+        const fullOutputPath = path.join(tmpFolder, fileName);
+
+        const outputDirName = path.dirname(fullOutputPath);
+        if (!fs.existsSync(outputDirName)) {
+            fs.mkdirSync(outputDirName, { recursive: true });
+        }
+        try {
+            imagejs.writeSync(fullOutputPath, image)
+        } catch (e) {
+            console.error(e)
+        }
+        const resource = await joplin.data.post(
+            ["resources"],
+            null,
+            { title: fileName }, // Resource metadata
+            [
+                {
+                    path: fullOutputPath, // Actual file
+                },
+            ]
+        );
+        createdResources.push(resource);
+    }
+    return createdResources;
+
 }

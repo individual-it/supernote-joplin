@@ -76,7 +76,7 @@ joplin.plugins.register({
         console.info(`found ${noteFiles.length} files`);
         console.info(noteFiles);
 
-        const tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'joplin-super-notebook'));
+        const tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'joplin-supernote-sync'));
         for (const noteFile of noteFiles) {
             const destinationNotebookId = await createJoplinNotebookStructure(noteFile, destinationNotebook.id);
             const sn = new SupernoteX(await readFileToUint8Array(path.join(supernoteNotesDirectory, noteFile)));
@@ -91,6 +91,10 @@ joplin.plugins.register({
             }
             await writeNote(destinationNotebookId, noteFile, noteContent)
         }
-        fs.rmdirSync(tmpFolder);
+        try {
+            fs.rmSync(tmpFolder, { recursive: true, force: true});
+        } catch (e) {
+            console.error(e);
+        }
     },
 });

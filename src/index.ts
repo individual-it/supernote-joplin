@@ -1,6 +1,7 @@
 import joplin from 'api';
+import fs = require('fs');
 import {SettingItemSubType, SettingItemType} from "../api/types";
-
+import * as path from "node:path";
 
 const registerSettings = async () => {
 	const sectionName = 'supernote';
@@ -22,6 +23,7 @@ const registerSettings = async () => {
 	});
 };
 
+
 joplin.plugins.register({
 
 	onStart: async function() {
@@ -30,5 +32,14 @@ joplin.plugins.register({
 		// eslint-disable-next-line no-console
 		console.info('Supernote plugin started!');
 		console.info('Notes are stored in: ' + supernoteNotesDirectory);
+		if (!fs.existsSync(supernoteNotesDirectory)) {
+			throw new Error('The supernote directory does not exist!');
+		}
+
+		const files = await fs.promises.readdir(supernoteNotesDirectory, { recursive: true });
+		const noteFiles = files.filter(file => file.endsWith('.note'));
+
+		console.info(`found ${noteFiles.length} files`);
+		console.info(noteFiles);
 	},
 });

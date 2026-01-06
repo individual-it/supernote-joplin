@@ -1,8 +1,10 @@
 // joplin.test.ts
-
+import fs = require('fs');
 import {expect, describe, it, vi, beforeEach, afterEach} from "vitest";
-import {createJoplinNotebookStructure, findMatchingNote, writeNote} from "../src/joplin";
+import {createJoplinNotebookStructure, createResources, findMatchingNote, writeNote} from "../src/joplin";
 import joplin from "../api";
+import {SupernoteX} from "../../supernote-typescript/src";
+import {readFileToUint8Array} from "../src/helpers";
 
 vi.mock('../api', (importOriginal) => {
     return {
@@ -149,5 +151,58 @@ describe("writeNote", () => {
         expect(joplin.data.put).toHaveBeenCalledWith(['notes', 'matchingNote'], null , {body: 'content', title: 'my note'});
         expect(joplin.data.put).toHaveBeenCalledOnce();
         expect(joplin.data.post).not.toHaveBeenCalled();
+    })
+})
+
+describe('createResources', () => {
+    const tmpFolder = '.tmp';
+    beforeEach(async () => {
+        vi.mocked(joplin.data.post).mockImplementationOnce((path, query, body): any => {
+                return {id: "newly-created-resource-id", title: body.title};
+            }
+        )
+        vi.mocked(joplin.data.post).mockImplementationOnce((path, query, body): any => {
+                return {id: "second-created-resource-id", title: body.title};
+            }
+        )
+        vi.mocked(joplin.data.post).mockImplementationOnce((path, query, body): any => {
+                return {id: "third-created-resource-id", title: body.title};
+            }
+        )
+    })
+    afterEach(async () => {
+        fs.rmSync(tmpFolder, {recursive: true, force: true});
+    })
+    it('creates a new resource for a single-page note', async () => {
+        const sn = new SupernoteX(await readFileToUint8Array('./tests/fixtures/Single page.note'));
+        const createdResources = await createResources(sn, './tmp', 'Single page.note');
+        expect(createdResources).toHaveLength(1);
+        expect(createdResources[0].id).toBe("newly-created-resource-id")
+        expect(createdResources[0].title).toBe("Single page.note-0.png")
+        expect(joplin.data.post).toHaveBeenCalledWith(
+            ['resources'], null, {title: 'Single page.note-0.png'}, [{path:'tmp/Single page.note-0.png'}]
+        );
+        expect(joplin.data.post).toHaveBeenCalledOnce();
+    })
+    it('creates a new resource for every page of a multipage note', async () => {
+        const sn = new SupernoteX(await readFileToUint8Array('./tests/fixtures/multiple pages.note'));
+        const createdResources = await createResources(sn, './tmp', 'multiple pages.note');
+        expect(createdResources).toHaveLength(3);
+        expect(createdResources[0].id).toBe("newly-created-resource-id")
+        expect(createdResources[0].title).toBe("multiple pages.note-0.png")
+        expect(createdResources[1].id).toBe("second-created-resource-id")
+        expect(createdResources[1].title).toBe("multiple pages.note-1.png")
+        expect(createdResources[2].id).toBe("third-created-resource-id")
+        expect(createdResources[2].title).toBe("multiple pages.note-2.png")
+        expect(joplin.data.post).toHaveBeenNthCalledWith(1,
+            ['resources'], null, {title: 'multiple pages.note-0.png'}, [{path:'tmp/multiple pages.note-0.png'}]
+        );
+        expect(joplin.data.post).toHaveBeenNthCalledWith(2,
+            ['resources'], null, {title: 'multiple pages.note-1.png'}, [{path:'tmp/multiple pages.note-1.png'}]
+        );
+        expect(joplin.data.post).toHaveBeenNthCalledWith(3,
+            ['resources'], null, {title: 'multiple pages.note-2.png'}, [{path:'tmp/multiple pages.note-2.png'}]
+        );
+        expect(joplin.data.post).toHaveBeenCalledTimes(3);
     })
 })

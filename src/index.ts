@@ -1,12 +1,13 @@
 import joplin from 'api';
-import fs = require('fs');
 import {SettingItemSubType, SettingItemType} from "../api/types";
 import {SupernoteX} from "supernote-typescript";
+import {createJoplinNotebookStructure, createResources, findMatchingNote, writeNote} from "./joplin";
+import {readFileToUint8Array} from "./helpers";
+import fs = require('fs');
 import path = require('path');
 import url = require('url');
 import os = require('os');
 import querystring = require('querystring');
-import {createJoplinNotebookStructure, createResources, findMatchingNote, writeNote} from "./joplin";
 
 const registerSettings = async () => {
     const sectionName = 'supernote';
@@ -37,18 +38,6 @@ const registerSettings = async () => {
         },
     });
 };
-
-function readFileToUint8Array(filePath: string): Promise<Uint8Array> {
-    return new Promise((resolve, reject) => {
-        fs.readFile(filePath, (err, data) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(new Uint8Array(data.buffer));
-            }
-        });
-    });
-}
 
 joplin.plugins.register({
 

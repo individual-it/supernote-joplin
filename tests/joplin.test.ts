@@ -1,7 +1,7 @@
 // joplin.test.ts
 
 import {expect, describe, it, vi, beforeEach, afterEach} from "vitest";
-import {createJoplinNotebookStructure, findMatchingNote} from "../src/joplin";
+import {createJoplinNotebookStructure, findMatchingNote, writeNote} from "../src/joplin";
 import joplin from "../api";
 
 vi.mock('../api', (importOriginal) => {
@@ -9,7 +9,8 @@ vi.mock('../api', (importOriginal) => {
         default: {
             data: {
                 get: vi.fn(),
-                post: vi.fn()
+                post: vi.fn(),
+                put: vi.fn()
             }
         },
     }
@@ -133,5 +134,20 @@ describe("findMatchingNote", () => {
         expect(result).toBeNull();
         expect(joplin.data.get).toHaveBeenNthCalledWith(1, ['folders', '123', 'notes']);
         expect(joplin.data.get).toHaveBeenCalledOnce();
+    })
+})
+
+describe("writeNote", () => {
+    it.for([[false],[""],[null],[undefined]]) ('creates a new note when no matching note is given', async ([matchingNote]) => {
+        await writeNote('123', matchingNote, 'subfolder/my note.note','content')
+        expect(joplin.data.post).toHaveBeenCalledWith(['notes'], null, {parent_id: '123', body: 'content', title: 'my note'});
+        expect(joplin.data.post).toHaveBeenCalledOnce();
+        expect(joplin.data.put).not.toHaveBeenCalled();
+    })
+    it ('overwrites the matching note', async () => {
+        await writeNote('123', {id: 'matchingNote'}, 'subfolder/my note.note','content')
+        expect(joplin.data.put).toHaveBeenCalledWith(['notes', 'matchingNote'], null , {body: 'content', title: 'my note'});
+        expect(joplin.data.put).toHaveBeenCalledOnce();
+        expect(joplin.data.post).not.toHaveBeenCalled();
     })
 })

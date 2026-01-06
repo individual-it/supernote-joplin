@@ -26,7 +26,7 @@ afterEach(async () => {
 describe('createJoplinNotebookStructure', () => {
 
     beforeEach(async () => {
-        vi.mocked(joplin.data.get).mockImplementation(() => {
+        vi.mocked(joplin.data.get).mockImplementation((): any => {
             return {
                 "items": [
                     {
@@ -51,7 +51,7 @@ describe('createJoplinNotebookStructure', () => {
                 "has_more": false
             }
         })
-        vi.mocked(joplin.data.post).mockImplementation((path, query, body) => {
+        vi.mocked(joplin.data.post).mockImplementation((path, query, body): any => {
                 if (body.parent_id === "0") {
                     return {id: "100"}
                 }
@@ -93,7 +93,7 @@ describe('createJoplinNotebookStructure', () => {
 describe("findMatchingNote", () => {
 
     beforeEach(async () => {
-        vi.mocked(joplin.data.get).mockImplementation((path) => {
+        vi.mocked(joplin.data.get).mockImplementation((path): any => {
             if (path[0] == "folders") {
                 return {
                     "items": [

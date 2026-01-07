@@ -1,9 +1,53 @@
 import joplin from "../api";
 import * as imagejs from "image-js"
 import {SupernoteX, toImage} from "supernote-typescript";
+import {ToastType} from "../api/types";
 import path = require('path');
 import fs = require('fs');
+import url = require('url');
+import querystring = require('querystring');
 
+
+export async function getDestinationRootNotebook(destinationNotebookExternalLink: string): Promise<string> {
+    const destinationNotebookURL = url.parse(destinationNotebookExternalLink)
+    const destinationNotebook = querystring.parse(destinationNotebookURL.query);
+    let checkDestinationNotebookResponse = null;
+    let checkDestinationNotebookError= null;
+    if (destinationNotebook.id && !Array.isArray(destinationNotebook.id)) {
+        try {
+            checkDestinationNotebookResponse = await joplin.data.get(['folders', destinationNotebook.id]);
+        } catch (e) {
+            checkDestinationNotebookError = e.message;
+        }
+
+    }
+    if (!checkDestinationNotebookResponse || checkDestinationNotebookError || Array.isArray(destinationNotebook.id)) {
+        let message = "Could not find the Joplin notebook for synchronisation. " +
+            "Please copy the external link of the notebook you want to use " +
+            "and paste it into the 'Joplin Notebook' setting."
+        await showMessage(
+            ToastType.Error,
+            message
+        );
+        message += ` DEBUG: ${checkDestinationNotebookError}`
+        throw new Error(message);
+    }
+    return destinationNotebook.id;
+}
+
+export async function showMessage(type: ToastType, messageForUser: string, duration?: number): Promise<void> {
+    let message="Supernote Sync: " + messageForUser;
+    const dialogs = joplin.views.dialogs;
+    if (duration === null) {
+        duration = 1000 * 60;
+    }
+    await dialogs.showToast({
+        message: message,
+        duration: duration,
+        type: type
+    })
+
+}
 /**
  * creates the notebook structure in Joplin that is parallel to the folder structure of the .note files
  * returns the id of the final notebook to store the note in

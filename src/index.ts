@@ -1,13 +1,19 @@
 import joplin from 'api';
-import {SettingItemSubType, SettingItemType} from "../api/types";
+import {SettingItemSubType, SettingItemType, ToastType} from "../api/types";
 import {SupernoteX} from "supernote-typescript";
-import {createJoplinNotebookStructure, createResources, findMatchingNote, writeNote} from "./joplin";
+import {
+    createJoplinNotebookStructure,
+    createResources,
+    findMatchingNote,
+    getDestinationRootNotebook,
+    showMessage,
+    writeNote
+} from "./joplin";
 import {readFileToUint8Array} from "./helpers";
 import fs = require('fs');
 import path = require('path');
-import url = require('url');
+
 import os = require('os');
-import querystring = require('querystring');
 
 const registerSettings = async () => {
     const sectionName = 'supernote';
@@ -24,7 +30,8 @@ const registerSettings = async () => {
             subType: SettingItemSubType.DirectoryPath,
             section: sectionName,
             public: true,
-            label: 'Directory to the .note files of Supernote',
+            label: 'Supernote Directory',
+            description: 'Directory to the .note files of Supernote',
         },
     });
 
@@ -34,7 +41,8 @@ const registerSettings = async () => {
             type: SettingItemType.String,
             section: sectionName,
             public: true,
-            label: 'External link of the Joplin Notebook, in which you want to import the .note files',
+            label: 'Joplin Notebook',
+            description: 'External link of the Joplin Notebook, to which you want to sync the .note files to.',
         },
     });
 };
@@ -43,20 +51,21 @@ joplin.plugins.register({
 
     onStart: async function () {
         await registerSettings();
+        const dialogs = joplin.views.dialogs;
         const supernoteNotesDirectory = await joplin.settings.value('supernote-notes-directory');
         const destinationNotebookExternalLink = await joplin.settings.value('destination-notebook');
-        const destinationNotebookURL = url.parse(destinationNotebookExternalLink)
-        const destinationNotebook = querystring.parse(destinationNotebookURL.query);
-        if (!destinationNotebook.id || Array.isArray(destinationNotebook.id)) {
-            throw new Error("could not find id in the given link of the notebook");
-        }
-
+        const destinationRootNotebookId = await getDestinationRootNotebook(destinationNotebookExternalLink);
 
         // eslint-disable-next-line no-console
         console.info('Supernote plugin started!');
         console.info('Notes are stored in: ' + supernoteNotesDirectory);
         if (!fs.existsSync(supernoteNotesDirectory)) {
-            throw new Error('The supernote directory does not exist!');
+            const message = 'The supernote directory does not exist!'
+            await showMessage(
+                ToastType.Error,
+                message
+            );
+            throw Error(message);
         }
 
         const files = await fs.promises.readdir(supernoteNotesDirectory, {recursive: true});
@@ -67,7 +76,7 @@ joplin.plugins.register({
 
         const tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'joplin-supernote-sync'));
         for (const noteFile of noteFiles) {
-            const destinationNotebookId = await createJoplinNotebookStructure(noteFile, destinationNotebook.id);
+            const destinationNotebookId = await createJoplinNotebookStructure(noteFile, destinationRootNotebookId);
             const fullPathOfNoteFile = path.join(supernoteNotesDirectory, noteFile)
             const statsNoteFile = fs.statSync(fullPathOfNoteFile);
             const matchingNote = await findMatchingNote(destinationNotebookId, noteFile);
@@ -76,6 +85,12 @@ joplin.plugins.register({
                 console.info(`skipping ${noteFile} as file mtime is ${statsNoteFile.mtime.getTime()} and note updated time: ${matchingNote.updated_time} `);
                 continue
             }
+
+            let toastMessage = `syncing file '${fullPathOfNoteFile}'`
+            if (matchingNote) {
+                toastMessage += ` - to note '${matchingNote.title}'`;
+            }
+            await showMessage(ToastType.Info, toastMessage );
             const sn = new SupernoteX(await readFileToUint8Array(fullPathOfNoteFile));
             let noteContent = "";
             for (const page of sn.pages) {

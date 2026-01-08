@@ -95,7 +95,6 @@ export async function findMatchingNote(destinationNotebookId: string, noteFile: 
 
 export async function writeNote(destinationNotebookId: string, matchingNote, noteFile: string, body: string): Promise<void> {
     const title = path.basename(noteFile, '.note');
-    const notesInDestinationFolder = await joplin.data.get(['folders', destinationNotebookId, 'notes']);
     if (matchingNote) {
         await joplin.data.put(['notes', matchingNote.id], null, {body, title});
     } else {

@@ -56,11 +56,17 @@ export async function showMessage(type: ToastType, messageForUser: string, durat
  */
 
 export async function createJoplinNotebookStructure(noteFile: string, destinationNotebookId: string): Promise<string> {
-    const allNotebooks = await joplin.data.get(['folders']);
+    let allNotebooks = [];
+    let response: any;
+    let pageNum = 1;
+    do {
+        response = await joplin.data.get(['folders'], {page: pageNum++});
+        allNotebooks = [...response.items, ...allNotebooks];
+    } while (response.has_more)
     const notePath = path.dirname(noteFile);
     const noteFolders = notePath === '.' ? [] : notePath.split(path.sep);
     for (const folder of noteFolders) {
-        const matchingNotebook = allNotebooks.items.find(
+        const matchingNotebook = allNotebooks.find(
             item => item.parent_id === destinationNotebookId && item.title === folder
         );
         if (matchingNotebook) {

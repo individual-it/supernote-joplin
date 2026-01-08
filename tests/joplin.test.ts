@@ -28,7 +28,7 @@ afterEach(async () => {
 describe('createJoplinNotebookStructure', () => {
 
     beforeEach(async () => {
-        vi.mocked(joplin.data.get).mockImplementation((): any => {
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
             return {
                 "items": [
                     {
@@ -49,6 +49,32 @@ describe('createJoplinNotebookStructure', () => {
                         "title": "an other folder",
                         "deleted_time": 0
                     }
+                ],
+                "has_more": true
+            }
+        })
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "2-1",
+                        "parent_id": "0",
+                        "title": "subfolder-second-page",
+                        "deleted_time": 0
+                    },
+                ],
+                "has_more": true
+            }
+        })
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "3-0",
+                        "parent_id": "2-1",
+                        "title": "subfolder-third-page",
+                        "deleted_time": 0
+                    },
                 ],
                 "has_more": false
             }
@@ -81,6 +107,22 @@ describe('createJoplinNotebookStructure', () => {
             parent_id: "1000",
             title: "third-level"
         })
+    });
+
+    it('does not create new folders if a subfolder exists', async () => {
+        const noteFile = 'an other folder/file.note';
+        const destinationNotebookId = '0';
+        const result = await createJoplinNotebookStructure(noteFile, destinationNotebookId);
+        expect(result).toBe('1');
+        expect(joplin.data.post).not.toHaveBeenCalled();
+    });
+
+    it('does not create new folders if a subfolder exists (pagination)', async () => {
+        const noteFile = 'subfolder-second-page/subfolder-third-page/file.note';
+        const destinationNotebookId = '0';
+        const result = await createJoplinNotebookStructure(noteFile, destinationNotebookId);
+        expect(result).toBe('3-0');
+        expect(joplin.data.post).not.toHaveBeenCalled();
     });
 
     it('does not create any new folders for a note of the root level', async () => {

@@ -1,4 +1,4 @@
-import fs = require('fs');
+import fs from 'fs';
 
 export function readFileToUint8Array(filePath: string): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {

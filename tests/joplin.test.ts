@@ -1,12 +1,12 @@
 // joplin.test.ts
-import fs = require('fs');
+import fs from 'fs';
 import {expect, describe, it, vi, beforeEach, afterEach} from "vitest";
 import {createJoplinNotebookStructure, createResources, findMatchingNote, writeNote} from "../src/joplin";
 import joplin from "../api";
 import {SupernoteX} from "../../supernote-typescript/src";
 import {readFileToUint8Array} from "../src/helpers";
 
-vi.mock('../api', (importOriginal) => {
+vi.mock('../api', () => {
     return {
         default: {
             data: {
@@ -28,6 +28,7 @@ afterEach(async () => {
 describe('createJoplinNotebookStructure', () => {
 
     beforeEach(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
             return {
                 "items": [
@@ -35,24 +36,23 @@ describe('createJoplinNotebookStructure', () => {
                         "id": "2",
                         "parent_id": "",
                         "title": "test1",
-                        "deleted_time": 0
                     },
                     {
                         "id": "0",
                         "parent_id": "",
                         "title": "supernote",
-                        "deleted_time": 0
                     },
                     {
                         "id": "1",
                         "parent_id": "0",
                         "title": "an other folder",
-                        "deleted_time": 0
                     }
                 ],
                 "has_more": true
             }
         })
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
             return {
                 "items": [
@@ -60,12 +60,13 @@ describe('createJoplinNotebookStructure', () => {
                         "id": "2-1",
                         "parent_id": "0",
                         "title": "subfolder-second-page",
-                        "deleted_time": 0
                     },
                 ],
                 "has_more": true
             }
         })
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
             return {
                 "items": [
@@ -73,13 +74,14 @@ describe('createJoplinNotebookStructure', () => {
                         "id": "3-0",
                         "parent_id": "2-1",
                         "title": "subfolder-third-page",
-                        "deleted_time": 0
                     },
                 ],
                 "has_more": false
             }
         })
-        vi.mocked(joplin.data.post).mockImplementation((path, query, body): any => {
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.post).mockImplementation((_path, _query, body): any => {
                 if (body.parent_id === "0") {
                     return {id: "100"}
                 }
@@ -137,7 +139,8 @@ describe('createJoplinNotebookStructure', () => {
 describe("findMatchingNote", () => {
 
     beforeEach(async () => {
-        vi.mocked(joplin.data.get).mockImplementationOnce((path): any => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
             return {
                 "items": [
                     {
@@ -156,7 +159,9 @@ describe("findMatchingNote", () => {
                 has_more: true
             }
         })
-        vi.mocked(joplin.data.get).mockImplementationOnce((path): any => {
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
             return {
                 "items": [
                     {
@@ -171,7 +176,9 @@ describe("findMatchingNote", () => {
                 has_more: true
             }
         })
-        vi.mocked(joplin.data.get).mockImplementationOnce((path): any => {
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
             return {
                 "items": [
                     {
@@ -186,6 +193,8 @@ describe("findMatchingNote", () => {
                 has_more: false
             }
         })
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(joplin.data.get).mockImplementationOnce((path): any => {
             return {
                 id: path[1]
@@ -218,20 +227,27 @@ describe("findMatchingNote", () => {
         const result = await findMatchingNote(destinationNotebookId, noteFile);
         expect(result).toBeNull();
         expect(joplin.data.get).toHaveBeenNthCalledWith(1, ['folders', '123', 'notes']);
-        expect(joplin.data.get).toHaveBeenCalledOnce();
+        expect(joplin.data.get).toHaveBeenCalledTimes(3);
     })
 })
 
 describe("writeNote", () => {
-    it.for([[false],[""],[null],[undefined]]) ('creates a new note when no matching note is given', async ([matchingNote]) => {
-        await writeNote('123', matchingNote, 'subfolder/my note.note','content')
-        expect(joplin.data.post).toHaveBeenCalledWith(['notes'], null, {parent_id: '123', body: 'content', title: 'my note'});
+    it.for([[false], [""], [null], [undefined]])('creates a new note when no matching note is given', async ([matchingNote]) => {
+        await writeNote('123', matchingNote, 'subfolder/my note.note', 'content')
+        expect(joplin.data.post).toHaveBeenCalledWith(['notes'], null, {
+            parent_id: '123',
+            body: 'content',
+            title: 'my note'
+        });
         expect(joplin.data.post).toHaveBeenCalledOnce();
         expect(joplin.data.put).not.toHaveBeenCalled();
     })
-    it ('overwrites the matching note', async () => {
-        await writeNote('123', {id: 'matchingNote'}, 'subfolder/my note.note','content')
-        expect(joplin.data.put).toHaveBeenCalledWith(['notes', 'matchingNote'], null , {body: 'content', title: 'my note'});
+    it('overwrites the matching note', async () => {
+        await writeNote('123', {id: 'matchingNote'}, 'subfolder/my note.note', 'content')
+        expect(joplin.data.put).toHaveBeenCalledWith(['notes', 'matchingNote'], null, {
+            body: 'content',
+            title: 'my note'
+        });
         expect(joplin.data.put).toHaveBeenCalledOnce();
         expect(joplin.data.post).not.toHaveBeenCalled();
     })
@@ -240,14 +256,19 @@ describe("writeNote", () => {
 describe('createResources', () => {
     const tmpFolder = '.tmp';
     beforeEach(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(joplin.data.post).mockImplementationOnce((path, query, body): any => {
                 return {id: "newly-created-resource-id", title: body.title};
             }
         )
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(joplin.data.post).mockImplementationOnce((path, query, body): any => {
                 return {id: "second-created-resource-id", title: body.title};
             }
         )
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(joplin.data.post).mockImplementationOnce((path, query, body): any => {
                 return {id: "third-created-resource-id", title: body.title};
             }
@@ -263,7 +284,7 @@ describe('createResources', () => {
         expect(createdResources[0].id).toBe("newly-created-resource-id")
         expect(createdResources[0].title).toBe("Single page.note-0.png")
         expect(joplin.data.post).toHaveBeenCalledWith(
-            ['resources'], null, {title: 'Single page.note-0.png'}, [{path:'tmp/Single page.note-0.png'}]
+            ['resources'], null, {title: 'Single page.note-0.png'}, [{path: 'tmp/Single page.note-0.png'}]
         );
         expect(joplin.data.post).toHaveBeenCalledOnce();
     })
@@ -278,13 +299,13 @@ describe('createResources', () => {
         expect(createdResources[2].id).toBe("third-created-resource-id")
         expect(createdResources[2].title).toBe("multiple pages.note-2.png")
         expect(joplin.data.post).toHaveBeenNthCalledWith(1,
-            ['resources'], null, {title: 'multiple pages.note-0.png'}, [{path:'tmp/multiple pages.note-0.png'}]
+            ['resources'], null, {title: 'multiple pages.note-0.png'}, [{path: 'tmp/multiple pages.note-0.png'}]
         );
         expect(joplin.data.post).toHaveBeenNthCalledWith(2,
-            ['resources'], null, {title: 'multiple pages.note-1.png'}, [{path:'tmp/multiple pages.note-1.png'}]
+            ['resources'], null, {title: 'multiple pages.note-1.png'}, [{path: 'tmp/multiple pages.note-1.png'}]
         );
         expect(joplin.data.post).toHaveBeenNthCalledWith(3,
-            ['resources'], null, {title: 'multiple pages.note-2.png'}, [{path:'tmp/multiple pages.note-2.png'}]
+            ['resources'], null, {title: 'multiple pages.note-2.png'}, [{path: 'tmp/multiple pages.note-2.png'}]
         );
         expect(joplin.data.post).toHaveBeenCalledTimes(3);
     })

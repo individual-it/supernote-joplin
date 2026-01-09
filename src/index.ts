@@ -10,10 +10,10 @@ import {
     writeNote
 } from "./joplin";
 import {readFileToUint8Array} from "./helpers";
-import fs = require('fs');
-import path = require('path');
+import fs from 'fs';
+import path from 'path';
 
-import os = require('os');
+import os from 'os';
 
 let syncInterval: NodeJS.Timeout;
 
@@ -65,7 +65,7 @@ const run = async () => {
     const destinationNotebookExternalLink = await joplin.settings.value('destination-notebook');
     const destinationRootNotebookId = await getDestinationRootNotebook(destinationNotebookExternalLink);
 
-    // eslint-disable-next-line no-console
+
     console.info('Supernote plugin started!');
     console.info('Notes are stored in: ' + supernoteNotesDirectory);
     if (!fs.existsSync(supernoteNotesDirectory)) {
@@ -126,7 +126,7 @@ joplin.plugins.register({
         let interval = await joplin.settings.value('sync-interval-seconds') * 1000;
         await run();
         syncInterval = setInterval(run, interval);
-        await joplin.settings.onChange(async (event) => {
+        await joplin.settings.onChange(async () => {
             clearInterval(syncInterval);
             interval = await joplin.settings.value('sync-interval-seconds') * 1000;
             syncInterval = setInterval(run, interval);

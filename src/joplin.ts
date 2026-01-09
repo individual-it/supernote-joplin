@@ -2,10 +2,22 @@ import joplin from "../api";
 import * as imagejs from "image-js"
 import {SupernoteX, toImage} from "supernote-typescript";
 import {ToastType} from "../api/types";
-import path = require('path');
-import fs = require('fs');
-import url = require('url');
-import querystring = require('querystring');
+import fs from 'fs';
+import path from 'path';
+import url from 'url';
+import querystring from 'querystring';
+
+export interface Note {
+    id: string;
+    title: string;
+    updated_time: number;
+}
+
+export interface Notebook {
+    id: string,
+    parent_id: string,
+    title: string,
+}
 
 
 export async function getDestinationRootNotebook(destinationNotebookExternalLink: string): Promise<string> {
@@ -36,7 +48,7 @@ export async function getDestinationRootNotebook(destinationNotebookExternalLink
 }
 
 export async function showMessage(type: ToastType, messageForUser: string, duration?: number): Promise<void> {
-    let message="Supernote Sync: " + messageForUser;
+    const message="Supernote Sync: " + messageForUser;
     const dialogs = joplin.views.dialogs;
     if (duration === null) {
         duration = 1000 * 60;
@@ -56,8 +68,8 @@ export async function showMessage(type: ToastType, messageForUser: string, durat
  */
 
 export async function createJoplinNotebookStructure(noteFile: string, destinationNotebookId: string): Promise<string> {
-    let allNotebooks = [];
-    let response: any;
+    let allNotebooks: Notebook[] = [];
+    let response: { items: Notebook[]; has_more: boolean; };
     let pageNum = 1;
     do {
         response = await joplin.data.get(['folders'], {page: pageNum++});
@@ -81,11 +93,11 @@ export async function createJoplinNotebookStructure(noteFile: string, destinatio
     return destinationNotebookId;
 }
 
-export async function findMatchingNote(destinationNotebookId: string, noteFile: string,): Promise<any> {
+export async function findMatchingNote(destinationNotebookId: string, noteFile: string,): Promise<Note> {
     const title = path.basename(noteFile, '.note');
-    let response: any;
-    let notesInDestinationFolder = [];
-    let pageNum = 1;
+    let response: { items: []; has_more: boolean; };
+    let notesInDestinationFolder: Note[] = [];
+    const pageNum = 1;
     do {
         response = await joplin.data.get(['folders', destinationNotebookId, 'notes']);
         notesInDestinationFolder = [...response.items, ...notesInDestinationFolder];
@@ -110,7 +122,7 @@ export async function writeNote(destinationNotebookId: string, matchingNote, not
 }
 
 export async function createResources(sn: SupernoteX, tmpFolder: string, noteFile: string) {
-    let images = await toImage(sn)
+    const images = await toImage(sn)
     const createdResources = [];
     for await (const [index, image] of images.entries()) {
         const fileName = `${noteFile}-${index}.png`;

@@ -97,9 +97,9 @@ export async function findMatchingNote(destinationNotebookId: string, noteFile: 
     const title = path.basename(noteFile, '.note');
     let response: { items: []; has_more: boolean; };
     let notesInDestinationFolder: Note[] = [];
-    const pageNum = 1;
+    let pageNum = 1;
     do {
-        response = await joplin.data.get(['folders', destinationNotebookId, 'notes']);
+        response = await joplin.data.get(['folders', destinationNotebookId, 'notes'], {page: pageNum++});
         notesInDestinationFolder = [...response.items, ...notesInDestinationFolder];
     } while (response.has_more)
 

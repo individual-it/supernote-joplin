@@ -53,31 +53,37 @@ describe('createJoplinNotebookStructure', () => {
         })
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
-            return {
-                "items": [
-                    {
-                        "id": "2-1",
-                        "parent_id": "0",
-                        "title": "subfolder-second-page",
-                    },
-                ],
-                "has_more": true
+        vi.mocked(joplin.data.get).mockImplementationOnce((_path, query): any => {
+            if (query.page == 2) {
+                return {
+                    "items": [
+                        {
+                            "id": "2-1",
+                            "parent_id": "0",
+                            "title": "subfolder-second-page",
+                        },
+                    ],
+                    "has_more": true
+                }
             }
+            return {}
         })
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
-            return {
-                "items": [
-                    {
-                        "id": "3-0",
-                        "parent_id": "2-1",
-                        "title": "subfolder-third-page",
-                    },
-                ],
-                "has_more": false
+        vi.mocked(joplin.data.get).mockImplementationOnce((_path, query): any => {
+            if (query.page == 3) {
+                return {
+                    "items": [
+                        {
+                            "id": "3-0",
+                            "parent_id": "2-1",
+                            "title": "subfolder-third-page",
+                        },
+                    ],
+                    "has_more": false
+                }
             }
+            return {}
         })
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -161,37 +167,43 @@ describe("findMatchingNote", () => {
         })
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
-            return {
-                "items": [
-                    {
-                        "id": "2-2",
-                        "title": "test1 on page2",
-                    },
-                    {
-                        "id": "2-1",
-                        "title": "an other note on page 2",
-                    }
-                ],
-                has_more: true
+        vi.mocked(joplin.data.get).mockImplementationOnce((_path, query): any => {
+            if (query.page == 2) {
+                return {
+                    "items": [
+                        {
+                            "id": "2-2",
+                            "title": "test1 on page2",
+                        },
+                        {
+                            "id": "2-1",
+                            "title": "an other note on page 2",
+                        }
+                    ],
+                    has_more: true
+                }
             }
+            return {}
         })
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
-            return {
-                "items": [
-                    {
-                        "id": "3-2",
-                        "title": "test1 on page 3",
-                    },
-                    {
-                        "id": "3-1",
-                        "title": "an other note on page 3",
-                    }
-                ],
-                has_more: false
+        vi.mocked(joplin.data.get).mockImplementationOnce((_path, query): any => {
+            if (query.page == 3) {
+                return {
+                    "items": [
+                        {
+                            "id": "3-2",
+                            "title": "test1 on page 3",
+                        },
+                        {
+                            "id": "3-1",
+                            "title": "an other note on page 3",
+                        }
+                    ],
+                    has_more: false
+                }
             }
+           return {}
         })
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -206,9 +218,9 @@ describe("findMatchingNote", () => {
         const destinationNotebookId = '123';
         const result = await findMatchingNote(destinationNotebookId, noteFile);
         expect(result.id).toBe('3');
-        expect(joplin.data.get).toHaveBeenNthCalledWith(1, ['folders', '123', 'notes']);
-        expect(joplin.data.get).toHaveBeenNthCalledWith(2, ['folders', '123', 'notes']);
-        expect(joplin.data.get).toHaveBeenNthCalledWith(3, ['folders', '123', 'notes']);
+        expect(joplin.data.get).toHaveBeenNthCalledWith(1, ['folders', '123', 'notes'], {page: 1});
+        expect(joplin.data.get).toHaveBeenNthCalledWith(2, ['folders', '123', 'notes'], {page: 2});
+        expect(joplin.data.get).toHaveBeenNthCalledWith(3, ['folders', '123', 'notes'], {page: 3});
         expect(joplin.data.get).toHaveBeenNthCalledWith(4, ['notes', '3'], {fields: ['id', 'title', 'updated_time']});
     })
     it('finds a note matching the file in the given notebook (pagination)', async () => {
@@ -216,9 +228,9 @@ describe("findMatchingNote", () => {
         const destinationNotebookId = '123';
         const result = await findMatchingNote(destinationNotebookId, noteFile);
         expect(result.id).toBe('3-2');
-        expect(joplin.data.get).toHaveBeenNthCalledWith(1, ['folders', '123', 'notes']);
-        expect(joplin.data.get).toHaveBeenNthCalledWith(2, ['folders', '123', 'notes']);
-        expect(joplin.data.get).toHaveBeenNthCalledWith(3, ['folders', '123', 'notes']);
+        expect(joplin.data.get).toHaveBeenNthCalledWith(1, ['folders', '123', 'notes'], {page: 1});
+        expect(joplin.data.get).toHaveBeenNthCalledWith(2, ['folders', '123', 'notes'], {page: 2});
+        expect(joplin.data.get).toHaveBeenNthCalledWith(3, ['folders', '123', 'notes'], {page: 3});
         expect(joplin.data.get).toHaveBeenNthCalledWith(4, ['notes', '3-2'], {fields: ['id', 'title', 'updated_time']});
     })
     it('returns null if there is no matching note', async () => {
@@ -226,7 +238,7 @@ describe("findMatchingNote", () => {
         const destinationNotebookId = '123';
         const result = await findMatchingNote(destinationNotebookId, noteFile);
         expect(result).toBeNull();
-        expect(joplin.data.get).toHaveBeenNthCalledWith(1, ['folders', '123', 'notes']);
+        expect(joplin.data.get).toHaveBeenNthCalledWith(1, ['folders', '123', 'notes'], {page: 1});
         expect(joplin.data.get).toHaveBeenCalledTimes(3);
     })
 })

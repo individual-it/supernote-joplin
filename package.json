@@ -9,7 +9,7 @@
     "test": "vitest",
     "lint": "eslint"
   },
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "keywords": [
     "joplin-plugin"
   ],

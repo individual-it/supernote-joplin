@@ -137,29 +137,58 @@ describe('createJoplinNotebookStructure', () => {
 describe("findMatchingNote", () => {
 
     beforeEach(async () => {
-        vi.mocked(joplin.data.get).mockImplementation((path): any => {
-            if (path[0] == "folders") {
-                return {
-                    "items": [
-                        {
-                            "id": "2",
-                            "title": "test1",
-                        },
-                        {
-                            "id": "3",
-                            "title": "file",
-                        },
-                        {
-                            "id": "1",
-                            "title": "an other note",
-                        }
-                    ],
-                }
+        vi.mocked(joplin.data.get).mockImplementationOnce((path): any => {
+            return {
+                "items": [
+                    {
+                        "id": "2",
+                        "title": "test1",
+                    },
+                    {
+                        "id": "3",
+                        "title": "file",
+                    },
+                    {
+                        "id": "1",
+                        "title": "an other note",
+                    }
+                ],
+                has_more: true
             }
-            if (path[0] == "notes") {
-                return {
-                    id: "3"
-                }
+        })
+        vi.mocked(joplin.data.get).mockImplementationOnce((path): any => {
+            return {
+                "items": [
+                    {
+                        "id": "2-2",
+                        "title": "test1 on page2",
+                    },
+                    {
+                        "id": "2-1",
+                        "title": "an other note on page 2",
+                    }
+                ],
+                has_more: true
+            }
+        })
+        vi.mocked(joplin.data.get).mockImplementationOnce((path): any => {
+            return {
+                "items": [
+                    {
+                        "id": "3-2",
+                        "title": "test1 on page 3",
+                    },
+                    {
+                        "id": "3-1",
+                        "title": "an other note on page 3",
+                    }
+                ],
+                has_more: false
+            }
+        })
+        vi.mocked(joplin.data.get).mockImplementationOnce((path): any => {
+            return {
+                id: path[1]
             }
         })
     })
@@ -169,7 +198,19 @@ describe("findMatchingNote", () => {
         const result = await findMatchingNote(destinationNotebookId, noteFile);
         expect(result.id).toBe('3');
         expect(joplin.data.get).toHaveBeenNthCalledWith(1, ['folders', '123', 'notes']);
-        expect(joplin.data.get).toHaveBeenNthCalledWith(2, ['notes', '3'], {fields: ['id', 'title', 'updated_time']});
+        expect(joplin.data.get).toHaveBeenNthCalledWith(2, ['folders', '123', 'notes']);
+        expect(joplin.data.get).toHaveBeenNthCalledWith(3, ['folders', '123', 'notes']);
+        expect(joplin.data.get).toHaveBeenNthCalledWith(4, ['notes', '3'], {fields: ['id', 'title', 'updated_time']});
+    })
+    it('finds a note matching the file in the given notebook (pagination)', async () => {
+        const noteFile = 'subfolder/an other folder/test1 on page 3.note';
+        const destinationNotebookId = '123';
+        const result = await findMatchingNote(destinationNotebookId, noteFile);
+        expect(result.id).toBe('3-2');
+        expect(joplin.data.get).toHaveBeenNthCalledWith(1, ['folders', '123', 'notes']);
+        expect(joplin.data.get).toHaveBeenNthCalledWith(2, ['folders', '123', 'notes']);
+        expect(joplin.data.get).toHaveBeenNthCalledWith(3, ['folders', '123', 'notes']);
+        expect(joplin.data.get).toHaveBeenNthCalledWith(4, ['notes', '3-2'], {fields: ['id', 'title', 'updated_time']});
     })
     it('returns null if there is no matching note', async () => {
         const noteFile = 'subfolder/an other folder/not-existing-note.note';

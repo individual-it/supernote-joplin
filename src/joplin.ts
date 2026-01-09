@@ -83,8 +83,15 @@ export async function createJoplinNotebookStructure(noteFile: string, destinatio
 
 export async function findMatchingNote(destinationNotebookId: string, noteFile: string,): Promise<any> {
     const title = path.basename(noteFile, '.note');
-    const notesInDestinationFolder = await joplin.data.get(['folders', destinationNotebookId, 'notes']);
-    const matchingNote = notesInDestinationFolder.items.find(
+    let response: any;
+    let notesInDestinationFolder = [];
+    let pageNum = 1;
+    do {
+        response = await joplin.data.get(['folders', destinationNotebookId, 'notes']);
+        notesInDestinationFolder = [...response.items, ...notesInDestinationFolder];
+    } while (response.has_more)
+
+    const matchingNote = notesInDestinationFolder.find(
         item => item.title === title
     );
     if (matchingNote) {

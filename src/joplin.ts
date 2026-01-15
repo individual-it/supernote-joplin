@@ -19,6 +19,10 @@ export interface Notebook {
     title: string,
 }
 
+export interface Tag {
+    id: string;
+    title: string;
+}
 
 export async function getDestinationRootNotebook(destinationNotebookExternalLink: string): Promise<string> {
     const destinationNotebookURL = url.parse(destinationNotebookExternalLink)
@@ -112,7 +116,7 @@ export async function findMatchingNote(destinationNotebookId: string, noteFile: 
     return null;
 }
 
-export async function writeNote(destinationNotebookId: string, matchingNote, noteFile: string, body: string): Promise<void> {
+export async function writeNote(destinationNotebookId: string, matchingNote, noteFile: string, body: string): Promise<string> {
     const title = path.basename(noteFile, '.note');
     if (matchingNote) {
         let response: { items: []; has_more: boolean; };
@@ -128,9 +132,11 @@ export async function writeNote(destinationNotebookId: string, matchingNote, not
                 await joplin.data.delete(['resources', resource.id]);
             }
         }
-        await joplin.data.put(['notes', matchingNote.id], null, {body, title});
+        const result = await joplin.data.put(['notes', matchingNote.id], null, {body, title});
+        return result.id
     } else {
-        await joplin.data.post(['notes'], null, {parent_id: destinationNotebookId, body, title});
+        const result = await joplin.data.post(['notes'], null, {parent_id: destinationNotebookId, body, title});
+        return result.id
     }
 }
 
@@ -163,7 +169,44 @@ export async function createResources(sn: SupernoteX, tmpFolder: string, noteFil
         createdResources.push(resource);
     }
     return createdResources;
+}
 
+export async function tagNote(noteId: string, tag: string) {
+    tag = tag.trim();
+    if (tag !== "") {
+        // Get all tags associated with the note
+        let response: { items: []; has_more: boolean; };
+        let noteTags = [];
+        let pageNum = 1;
+        do {
+            response = await joplin.data.get(['notes', noteId, 'tags'], {page: pageNum++});
+            noteTags = [...response.items, ...noteTags];
+        } while (response.has_more)
+
+        // Check if the note already has the target tag
+        const noteHasTag = noteTags.some((t: Tag) => t.title === tag);
+
+        if (!noteHasTag) {
+            // Get all available tags in Joplin
+            let allTags = [];
+            pageNum = 1;
+            do {
+                response = await joplin.data.get(['tags'], {page: pageNum++});
+                allTags = [...response.items, ...allTags];
+            } while (response.has_more)
+
+            // Check if the tag exists
+            let targetTag = allTags.find((t: Tag) => t.title === tag);
+
+            // Create the tag if it doesn't exist
+            if (!targetTag) {
+                targetTag = await joplin.data.post(['tags'], null, {title: tag});
+            }
+
+            // Associate the tag with the note
+            await joplin.data.post(['tags', targetTag.id, 'notes'], null, {id: noteId});
+        }
+    }
 }
 
 export async function createNoteContent(sn: SupernoteX, tmpFolder: string, noteFile: string, reflow: boolean) {

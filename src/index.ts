@@ -5,7 +5,7 @@ import {
     createJoplinNotebookStructure, createNoteContent,
     findMatchingNote,
     getDestinationRootNotebook,
-    showMessage,
+    showMessage, tagNote,
     writeNote
 } from "./joplin";
 import {readFileToUint8Array} from "./helpers";
@@ -68,6 +68,17 @@ const registerSettings = async () => {
             description: 'When enabled, close lines in the .note file will result in a single line of recognized text and only lines that are further apart will create a new paragraph. When disabled, lines will appear as written.',
         },
     });
+
+    await joplin.settings.registerSettings({
+        'tag': {
+            value: '',
+            type: SettingItemType.String,
+            section: sectionName,
+            public: true,
+            label: 'Tag for synced notes',
+            description: 'Tag every synced note with this tag',
+        },
+    });
 };
 
 const run = async () => {
@@ -120,10 +131,11 @@ const run = async () => {
             console.error(e)
             continue
         }
-
         const reflow = await joplin.settings.value('auto-reflow-recognized-text');
         const noteContent = await createNoteContent(sn, tmpFolder, noteFile, reflow);
-        await writeNote(destinationNotebookId, matchingNote, noteFile, noteContent)
+        const noteId = await writeNote(destinationNotebookId, matchingNote, noteFile, noteContent)
+        const tag = await joplin.settings.value('tag');
+        await tagNote(noteId, tag);
     }
     try {
         fs.rmSync(tmpFolder, {recursive: true, force: true});

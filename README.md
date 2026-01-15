@@ -10,6 +10,7 @@ This is a [Joplin plugin](https://joplinapp.org) to sync notes from a [supernote
 - Folder structure is preserved as a Joplin notebook structure.
 - The filename of the Supernote file will become the title of the Joplin note.
 - :warning: If there is an existing note in the Joplin structure, that matches the file name of the Supernote file, it will be overwritten.
+- Resources associated only with the note to be overwritten will be deleted.
 - Sync happens periodically and on Joplin start.
 - Only new and changed files are re-synced.
 - Currently, there is NO way to sync back from Joplin to Supernote, nor to edit the notes in Joplin. Whatever change you do in Joplin to the notes, it will be overwritten in the next sync.

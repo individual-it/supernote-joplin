@@ -12,7 +12,8 @@ vi.mock('../api', () => {
             data: {
                 get: vi.fn(),
                 post: vi.fn(),
-                put: vi.fn()
+                put: vi.fn(),
+                delete: vi.fn(),
             }
         },
     }
@@ -203,7 +204,7 @@ describe("findMatchingNote", () => {
                     has_more: false
                 }
             }
-           return {}
+            return {}
         })
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -255,6 +256,19 @@ describe("writeNote", () => {
         expect(joplin.data.put).not.toHaveBeenCalled();
     })
     it('overwrites the matching note', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementation((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "matchingNote",
+                        "parent_id": "123",
+                        "title": "the note",
+                    },
+                ],
+                has_more: false
+            }
+        })
         await writeNote('123', {id: 'matchingNote'}, 'subfolder/my note.note', 'content')
         expect(joplin.data.put).toHaveBeenCalledWith(['notes', 'matchingNote'], null, {
             body: 'content',
@@ -262,6 +276,123 @@ describe("writeNote", () => {
         });
         expect(joplin.data.put).toHaveBeenCalledOnce();
         expect(joplin.data.post).not.toHaveBeenCalled();
+    })
+    it('deletes all resources of a note before writing it', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementation((path): any => {
+            // get the resources of a note
+            if (path[0] === 'notes') {
+                return {
+                    "items": [
+                        {
+                            "id": "2",
+                            "title": "test1",
+                        },
+                        {
+                            "id": "3",
+                            "title": "file",
+                        },
+                        {
+                            "id": "1",
+                            "title": "an other resource",
+                        }
+                    ],
+                    has_more: false
+                }
+            }
+
+            // get the notes associated with a resource
+            if (path[0] === 'resources') {
+                return {
+                    "items": [
+                        {
+                            "id": "matchingNote",
+                            "parent_id": "123",
+                            "title": "the note",
+                        },
+                    ],
+                    has_more: false
+                }
+            }
+        })
+        await writeNote('123', {id: 'matchingNote'}, 'subfolder/my note.note', 'content')
+        expect(joplin.data.delete).toHaveBeenNthCalledWith(1, ['resources', '2']);
+        expect(joplin.data.delete).toHaveBeenNthCalledWith(2, ['resources', '3']);
+        expect(joplin.data.delete).toHaveBeenNthCalledWith(3, ['resources', '1']);
+        expect(joplin.data.delete).toHaveBeenCalledTimes(3)
+    })
+    it('does not delete the resources that are associated with more than one note', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementation((path): any => {
+            // get the resources of a note
+            if (path[0] === 'notes') {
+                return {
+                    "items": [
+                        {
+                            "id": "2",
+                            "title": "test1",
+                        },
+                        {
+                            "id": "associated with multiple notes",
+                            "title": "this resource is associated with multiple notes",
+                        },
+                        {
+                            "id": "1",
+                            "title": "an other resource",
+                        }
+                    ],
+                    has_more: false
+                }
+            }
+
+            // get the notes associated with a resource
+            if (path[0] === 'resources' && path[1] === 'associated with multiple notes') {
+                return {
+                    "items": [
+                        {
+                            "id": "matchingNote",
+                            "parent_id": "123",
+                            "title": "the note",
+                        },
+                        {
+                            "id": "an other note",
+                            "parent_id": "123",
+                            "title": "the note",
+                        },
+                    ],
+                    has_more: false
+                }
+            } else {
+                return {
+                    "items": [
+                        {
+                            "id": "matchingNote",
+                            "parent_id": "123",
+                            "title": "the note",
+                        },
+                    ]
+                }
+            }
+        })
+        await writeNote('123', {id: 'matchingNote'}, 'subfolder/my note.note', 'content')
+        expect(joplin.data.delete).toHaveBeenNthCalledWith(1, ['resources', '2']);
+        expect(joplin.data.delete).toHaveBeenNthCalledWith(2, ['resources', '1']);
+        expect(joplin.data.delete).toHaveBeenCalledTimes(2)
+    })
+    it('does not delete anything if there is no resource with the note', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementation((path): any => {
+            // get the resources of a note
+            if (path[0] === 'notes') {
+                return {
+                    "items": [],
+                    has_more: false
+                }
+            }
+
+        })
+        await writeNote('123', {id: 'matchingNote'}, 'subfolder/my note.note', 'content')
+        expect(joplin.data.delete).not.toHaveBeenCalled()
     })
 })
 

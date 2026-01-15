@@ -115,6 +115,19 @@ export async function findMatchingNote(destinationNotebookId: string, noteFile: 
 export async function writeNote(destinationNotebookId: string, matchingNote, noteFile: string, body: string): Promise<void> {
     const title = path.basename(noteFile, '.note');
     if (matchingNote) {
+        let response: { items: []; has_more: boolean; };
+        let existingResources = [];
+        let pageNum = 1;
+        do {
+            response = await joplin.data.get(['notes', matchingNote.id, 'resources'], {page: pageNum++});
+            existingResources = [...response.items, ...existingResources]
+        } while (response.has_more)
+        for (const resource of existingResources) {
+            const associatedNotes = await joplin.data.get(['resources', resource.id, 'notes']);
+            if (associatedNotes.items.length === 1 && associatedNotes.items[0].id === matchingNote.id) {
+                await joplin.data.delete(['resources', resource.id]);
+            }
+        }
         await joplin.data.put(['notes', matchingNote.id], null, {body, title});
     } else {
         await joplin.data.post(['notes'], null, {parent_id: destinationNotebookId, body, title});

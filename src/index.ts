@@ -100,7 +100,17 @@ const run = async () => {
             toastMessage += ` - to note '${matchingNote.title}'`;
         }
         await showMessage(ToastType.Info, toastMessage);
-        const sn = new SupernoteX(await readFileToUint8Array(fullPathOfNoteFile));
+        let sn: SupernoteX;
+        try {
+            sn = new SupernoteX(await readFileToUint8Array(fullPathOfNoteFile));
+        } catch (e) {
+            const errorMessage = `could not parse '${fullPathOfNoteFile}'`
+            await showMessage(ToastType.Error, errorMessage)
+            console.error(errorMessage)
+            console.error(e)
+            continue
+        }
+
         let noteContent = "";
         for (const page of sn.pages) {
             if (page.paragraphs.trim().length > 0) {

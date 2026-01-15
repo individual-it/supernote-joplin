@@ -29,8 +29,13 @@ This is a [Joplin plugin](https://joplinapp.org) to sync notes from a [supernote
    - :warning: this script is only tested so far with Linux and Joplin 3.4.12
    - to transfer the files, use [WebDAV](https://supernote.com/blogs/supernote-blog/private-cloud-for-data-sovereignty-serverlink-for-remote-files-control-via-webdav), sideloaded [syncthing](https://f-droid.org/en/packages/com.github.catfriend1.syncthingfork/), or a simple copy
 5. Open the "Plugins" section in the Joplin options
-6. Press the Plugin tools "gear" button and select "Install from file" then select the [build](#build) .jpl file.
-   (I will try to get the plugin into the [store](https://joplinapp.org/plugins/) later)
+6. Install:
+   - Automatic:
+      1. Search for "supernote sync"
+      2. Click "Install"
+   - Manual:
+      1. [download the last `net.individual-it.Supernote.jpl` from the releases](https://github.com/individual-it/supernote-joplin/releases), or [build](#build) it.
+      2. Press the Plugin tools "gear" button and select "Install from file" then select the .jpl file.
 7. Restart Joplin
 
 ## Configure

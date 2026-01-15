@@ -1,0 +1,43 @@
+name: release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: supernote-joplin
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+      - name: Check out supernote-typescript
+        uses: actions/checkout@v6
+        with:
+            repository: individual-it/supernote-typescript
+            path: supernote-typescript
+      - name: install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: build supernote-typescript
+        run: |
+          cd supernote-typescript
+          pnpm install
+          npm run build
+      - name: test
+        run: |
+          cd supernote-joplin
+          npm ci
+          npm test
+      - name: build
+        run: |
+          cd supernote-joplin
+          npm run dist
+      - name: publish
+        uses: softprops/action-gh-release@v2
+        with:
+           files: supernote-joplin/publish/net.individual-it.Supernote.jpl

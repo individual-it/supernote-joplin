@@ -112,7 +112,7 @@ export async function findMatchingNote(destinationNotebookId: string, noteFile: 
     return null;
 }
 
-export async function writeNote(destinationNotebookId: string, matchingNote, noteFile: string, body: string): Promise<void> {
+export async function writeNote(destinationNotebookId: string, matchingNote, noteFile: string, body: string): Promise<string> {
     const title = path.basename(noteFile, '.note');
     if (matchingNote) {
         let response: { items: []; has_more: boolean; };
@@ -128,9 +128,11 @@ export async function writeNote(destinationNotebookId: string, matchingNote, not
                 await joplin.data.delete(['resources', resource.id]);
             }
         }
-        await joplin.data.put(['notes', matchingNote.id], null, {body, title});
+        const result = await joplin.data.put(['notes', matchingNote.id], null, {body, title});
+        return result.id
     } else {
-        await joplin.data.post(['notes'], null, {parent_id: destinationNotebookId, body, title});
+        const result = await joplin.data.post(['notes'], null, {parent_id: destinationNotebookId, body, title});
+        return result.id
     }
 }
 
@@ -163,5 +165,14 @@ export async function createResources(sn: SupernoteX, tmpFolder: string, noteFil
         createdResources.push(resource);
     }
     return createdResources;
+}
+
+export async function tagNote(noteId: string, tag: string) {
+    if (tag !== "") {
+        // get all tags
+        // check if there is a tag with the string mathing tag
+        // check if the note already has that tag set
+        // set the tag on the note, if not
+    }
 
 }

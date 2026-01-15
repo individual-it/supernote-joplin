@@ -6,7 +6,7 @@ import {
     createResources,
     findMatchingNote,
     getDestinationRootNotebook,
-    showMessage,
+    showMessage, tagNote,
     writeNote
 } from "./joplin";
 import {readFileToUint8Array} from "./helpers";
@@ -56,6 +56,17 @@ const registerSettings = async () => {
             public: true,
             label: 'Sync Interval in seconds',
             description: 'How frequent to sync the .note files to Joplin.',
+        },
+    });
+
+    await joplin.settings.registerSettings({
+        'tag': {
+            value: '',
+            type: SettingItemType.String,
+            section: sectionName,
+            public: true,
+            label: 'Tag for synced notes',
+            description: 'Tag every synced note with this tag',
         },
     });
 };
@@ -110,7 +121,10 @@ const run = async () => {
         for (const resource of await createResources(sn, tmpFolder, noteFile)) {
             noteContent += `![${resource.title}](:/${resource.id})\n`;
         }
-        await writeNote(destinationNotebookId, matchingNote, noteFile, noteContent)
+        const noteId = await writeNote(destinationNotebookId, matchingNote, noteFile, noteContent)
+        const tag = await joplin.settings.value('tag');
+        await tagNote(noteId, tag);
+
     }
     try {
         fs.rmSync(tmpFolder, {recursive: true, force: true});

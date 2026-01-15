@@ -245,6 +245,16 @@ describe("findMatchingNote", () => {
 })
 
 describe("writeNote", () => {
+    beforeEach(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.put).mockImplementation((path): any => {
+            return {id: path[1]}
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.post).mockImplementation((): any => {
+            return {id: "created note"}
+        });
+    });
     it.for([[false], [""], [null], [undefined]])('creates a new note when no matching note is given', async ([matchingNote]) => {
         await writeNote('123', matchingNote, 'subfolder/my note.note', 'content')
         expect(joplin.data.post).toHaveBeenCalledWith(['notes'], null, {

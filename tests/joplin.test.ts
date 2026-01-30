@@ -5,7 +5,7 @@ import {
     createJoplinNotebookStructure,
     createNoteContent,
     createResources,
-    findMatchingNote,
+    findMatchingNote, tagNote,
     writeNote
 } from "../src/joplin";
 import joplin from "../api";
@@ -251,6 +251,16 @@ describe("findMatchingNote", () => {
 })
 
 describe("writeNote", () => {
+    beforeEach(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.put).mockImplementation((path): any => {
+            return {id: path[1]}
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.post).mockImplementation((): any => {
+            return {id: "created note"}
+        });
+    });
     it.for([[false], [""], [null], [undefined]])('creates a new note when no matching note is given', async ([matchingNote]) => {
         await writeNote('123', matchingNote, 'subfolder/my note.note', 'content')
         expect(joplin.data.post).toHaveBeenCalledWith(['notes'], null, {
@@ -506,4 +516,199 @@ describe('createNoteContent', () => {
 
         expect(result).toBe(expectedContent);
     });
+})
+
+describe('tagNote', () => {
+    it('tags the note if it is not tagged yet', async () => {
+        // the note has no tags
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [],
+                has_more: false
+            }
+        })
+        // a tag with the name already exists
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "another-tag-id",
+                        "title": "some tag"
+                    },
+                    {
+                        "id": "existing-tag-id",
+                        "title": "synced from Supernote"
+                    }
+                ],
+                has_more: false
+            }
+        })
+        await tagNote('myNote', 'synced from Supernote');
+        expect(joplin.data.post).toHaveBeenCalledExactlyOnceWith(
+            ['tags', 'existing-tag-id', 'notes'], null, {id: 'myNote'}
+        );
+    })
+
+    it('tags the note if it is already tagged with another tag', async () => {
+        // the note has a tag, but not the one we want
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "another-tag-id",
+                        "title": "some tag"
+                    },
+                ],
+                has_more: false
+            }
+        })
+        // a tag with the name already exists
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "another-tag-id",
+                        "title": "some tag"
+                    },
+                    {
+                        "id": "existing-tag-id",
+                        "title": "synced from Supernote"
+                    }
+                ],
+                has_more: false
+            }
+        })
+        await tagNote('myNote', 'synced from Supernote');
+        expect(joplin.data.post).toHaveBeenCalledExactlyOnceWith(
+            ['tags', 'existing-tag-id', 'notes'], null, {id: 'myNote'}
+        );
+    })
+
+    it.for([[""], [" "], ["   "]])('does nothing if an empty tag is given', async ([tag]) => {
+        await tagNote('myNote', tag);
+        expect(joplin.data.post).toHaveBeenCalledTimes(0);
+        expect(joplin.data.put).toHaveBeenCalledTimes(0);
+        expect(joplin.data.get).toHaveBeenCalledTimes(0);
+    })
+    it('does not tag the note if it has the tag already assigned', async () => {
+        // the note has already this and other tags
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "another-tag-id",
+                        "title": "some tag"
+                    },
+                    {
+                        "id": "existing-tag-id",
+                        "title": "synced from Supernote"
+                    }
+                ],
+                has_more: false
+            }
+        })
+        await tagNote('myNote', 'synced from Supernote');
+        expect(joplin.data.post).toHaveBeenCalledTimes(0);
+    })
+    it('creates a new tag if it does not exist', async () => {
+        // the note has a tag, but not the one we want
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "another-tag-id",
+                        "title": "some tag"
+                    },
+                ],
+                has_more: false
+            }
+        })
+        // there are tags, but not the one we want
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "another-tag-id",
+                        "title": "some tag"
+                    },
+                    {
+                        "id": "random-existing-tag-id",
+                        "title": "some random tag"
+                    }
+                ],
+                has_more: false
+            }
+        })
+
+        // tag creation post
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.post).mockImplementationOnce((): any => {
+            return {
+                       "id": "new-tag-id",
+                        "title": "synced from Supernote"
+                    }
+        })
+        await tagNote('myNote', 'synced from Supernote');
+        expect(joplin.data.post).toHaveBeenNthCalledWith(1,
+            ['tags'], null, {title: 'synced from Supernote'}
+        );
+        expect(joplin.data.post).toHaveBeenNthCalledWith(2,
+            ['tags', 'new-tag-id', 'notes'], null, {id: 'myNote'}
+        );
+    })
+    it('creates a new tag with the trimmed name', async () => {
+        // the note has a tag, but not the one we want
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "another-tag-id",
+                        "title": "some tag"
+                    },
+                ],
+                has_more: false
+            }
+        })
+        // there are tags, but not the one we want
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce((): any => {
+            return {
+                "items": [
+                    {
+                        "id": "another-tag-id",
+                        "title": "some tag"
+                    },
+                    {
+                        "id": "random-existing-tag-id",
+                        "title": "some random tag"
+                    }
+                ],
+                has_more: false
+            }
+        })
+
+        // tag creation post
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.post).mockImplementationOnce((): any => {
+            return {
+                       "id": "new-tag-id",
+                        "title": "  synced from Supernote  "
+                    }
+        })
+        await tagNote('myNote', 'synced from Supernote');
+        expect(joplin.data.post).toHaveBeenNthCalledWith(1,
+            ['tags'], null, {title: 'synced from Supernote'}
+        );
+        expect(joplin.data.post).toHaveBeenNthCalledWith(2,
+            ['tags', 'new-tag-id', 'notes'], null, {id: 'myNote'}
+        );
+    })
 })

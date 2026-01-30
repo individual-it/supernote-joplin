@@ -165,3 +165,22 @@ export async function createResources(sn: SupernoteX, tmpFolder: string, noteFil
     return createdResources;
 
 }
+
+export async function createNoteContent(sn: SupernoteX, tmpFolder: string, noteFile: string, reflow: boolean) {
+    let noteContent = "";
+    for (const page of sn.pages) {
+        let recognizedText = "";
+        if (reflow) {
+            recognizedText = page.paragraphs;
+        } else {
+            recognizedText = page.text;
+        }
+        if (recognizedText.trim().length > 0) {
+            noteContent += recognizedText + "\n\n";
+        }
+    }
+    for (const resource of await createResources(sn, tmpFolder, noteFile)) {
+        noteContent += `![${resource.title}](:/${resource.id})\n`;
+    }
+    return noteContent;
+}

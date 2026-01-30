@@ -1,7 +1,13 @@
 // joplin.test.ts
 import fs from 'fs';
 import {expect, describe, it, vi, beforeEach, afterEach} from "vitest";
-import {createJoplinNotebookStructure, createResources, findMatchingNote, writeNote} from "../src/joplin";
+import {
+    createJoplinNotebookStructure,
+    createNoteContent,
+    createResources,
+    findMatchingNote,
+    writeNote
+} from "../src/joplin";
 import joplin from "../api";
 import {SupernoteX} from "../../supernote-typescript/src";
 import {readFileToUint8Array} from "../src/helpers";
@@ -452,4 +458,52 @@ describe('createResources', () => {
         );
         expect(joplin.data.post).toHaveBeenCalledTimes(3);
     })
+})
+
+describe('createNoteContent', () => {
+    const tmpFolder = './tmp';
+    beforeEach(async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.post).mockImplementation((path, query, body): any => {
+                return {id: "newly-created-resource-id", title: body.title};
+            }
+        )
+    })
+    afterEach(async () => {
+        fs.rmSync(tmpFolder, {recursive: true, force: true});
+    })
+    it.for([[true],[false]])('should only contain the image when there is no text recognized', async ([reflow]) => {
+        const sn = new SupernoteX(await readFileToUint8Array('./tests/fixtures/Single page.note'));
+        const result = await createNoteContent(sn, tmpFolder, 'noteFile', reflow);
+
+        expect(result).toBe('![noteFile-0.png](:/newly-created-resource-id)\n');
+    });
+
+    it.for([
+        [
+            true,
+            "Real time recognition\n" +
+            "\n" +
+            "Here a note, that contains also some recognized text\n" +
+            "\n" +
+            "![noteFile-0.png](:/newly-created-resource-id)\n"
+        ],
+        [
+            false,
+            "Real time recognition\n" +
+            "Here a note, that contains\n" +
+            "also some recognized text\n" +
+            "\n" +
+            "![noteFile-0.png](:/newly-created-resource-id)\n"
+        ]
+    ])('should reflow recognized text when reflow switch is set', async ([reflow, expectedContent]) => {
+
+        if (typeof reflow !== "boolean") {
+            throw TypeError("reflow must be boolean")
+        }
+        const sn = new SupernoteX(await readFileToUint8Array('./tests/fixtures/realtime-recognition.note'));
+        const result = await createNoteContent(sn, tmpFolder, 'noteFile', reflow);
+
+        expect(result).toBe(expectedContent);
+    });
 })

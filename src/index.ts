@@ -2,7 +2,7 @@ import joplin from 'api';
 import {SettingItemSubType, SettingItemType, ToastType} from "../api/types";
 import {SupernoteX} from "supernote-typescript";
 import {
-    createJoplinNotebookStructure,
+    createJoplinNotebookStructure, createNoteContent,
     createResources,
     findMatchingNote,
     getDestinationRootNotebook,
@@ -58,6 +58,17 @@ const registerSettings = async () => {
             description: 'How frequent to sync the .note files to Joplin.',
         },
     });
+
+    await joplin.settings.registerSettings({
+        'auto-reflow-recognized-text': {
+            value: true,
+            type: SettingItemType.Bool,
+            section: sectionName,
+            public: true,
+            label: 'Automatically reflow recognized text.',
+            description: 'When enabled, close lines in the .note file will result in a single line of recognized text and only lines that are further apart will create a new paragraph. When disabled, lines will appear as written.',
+        },
+    });
 };
 
 const run = async () => {
@@ -111,15 +122,8 @@ const run = async () => {
             continue
         }
 
-        let noteContent = "";
-        for (const page of sn.pages) {
-            if (page.paragraphs.trim().length > 0) {
-                noteContent += page.paragraphs + "\n\n";
-            }
-        }
-        for (const resource of await createResources(sn, tmpFolder, noteFile)) {
-            noteContent += `![${resource.title}](:/${resource.id})\n`;
-        }
+        const reflow = await joplin.settings.value('auto-reflow-recognized-text');
+        const noteContent = createNoteContent(sn, tmpFolder, noteFile, reflow);
         await writeNote(destinationNotebookId, matchingNote, noteFile, noteContent)
     }
     try {

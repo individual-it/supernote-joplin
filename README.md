@@ -2,14 +2,14 @@
 
 This is a [Joplin plugin](https://joplinapp.org) to sync notes from a [supernote device](https://supernote.com/).
 
-:warning: This is still in heavy development. Try it if you are brave and report any issues.
+⚠️ This is still in heavy development. Try it if you are brave and report any issues.
 
 ## Features
 - One-way-Sync of Supernote notes into Joplin. 
 - The Supernote notes will be converted to images and attached to the Joplin notes. Recognized text will be added as text.
 - Folder structure is preserved as a Joplin notebook structure.
 - The filename of the Supernote file will become the title of the Joplin note.
-- :warning: If there is an existing note in the Joplin structure that matches the file name of the Supernote file, it will be overwritten.
+- ⚠️ If there is an existing note in the Joplin structure that matches the file name of the Supernote file, it will be overwritten.
 - Resources associated only with the note to be overwritten will be deleted.
 - Sync happens periodically and on Joplin start.
 - Only new and changed files are re-synced.
@@ -26,7 +26,7 @@ This is a [Joplin plugin](https://joplinapp.org) to sync notes from a [supernote
 2. Check your backup
 3. Make sure your backup contains all data and is restorable
 4. Transfer the supernote .note files to the device you are running Joplin on (e.g. your PC) 
-   - :warning: this script is only tested so far with Linux and Joplin 3.4.12
+   - ⚠️ this script is only tested so far with Linux and Joplin 3.4.12
    - to transfer the files, use [WebDAV](https://supernote.com/blogs/supernote-blog/private-cloud-for-data-sovereignty-serverlink-for-remote-files-control-via-webdav), sideloaded [syncthing](https://f-droid.org/en/packages/com.github.catfriend1.syncthingfork/), or a simple copy
 5. Open the "Plugins" section in the Joplin options
 6. Install:

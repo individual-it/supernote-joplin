@@ -23,16 +23,25 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     needs: test
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
     steps:
+      - uses: actions/checkout@v6
+        with:
+          path: supernote-joplin
       - name: install and build dependencies
-        uses: ./supernote-joplin/.github/actions/install-build-dep.yaml
-      - name: build
+        uses: ./supernote-joplin/.github/install-build-dep
+      - name: build-publish-to-npmjs
         run: |
           cd supernote-joplin
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+          npm ci
           npm run dist
-      - name: publish
+          npm publish
+      - name: publish-to-github
         uses: softprops/action-gh-release@v2
         with:
            files: supernote-joplin/publish/net.individual-it.Supernote.jpl

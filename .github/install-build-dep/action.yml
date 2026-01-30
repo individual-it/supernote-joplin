@@ -1,0 +1,21 @@
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 20
+    - name: Check out supernote-typescript
+      uses: actions/checkout@v6
+      with:
+        repository: individual-it/supernote-typescript
+        path: supernote-typescript
+    - name: install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    - name: build supernote-typescript
+      run: |
+        cd supernote-typescript
+        pnpm install
+        npm run build
+      shell: bash

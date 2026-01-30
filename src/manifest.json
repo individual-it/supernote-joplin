@@ -2,7 +2,7 @@
 	"manifest_version": 1,
 	"id": "net.individual-it.Supernote",
 	"app_min_version": "3.4",
-	"version": "0.0.2",
+	"version": "0.1.0",
 	"name": "supernote sync",
 	"description": "Sync your notes from your Supernote device into Joplin",
 	"author": "Artur Neumann",

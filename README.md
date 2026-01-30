@@ -50,3 +50,8 @@ This is a [Joplin plugin](https://joplinapp.org) to sync notes from a [supernote
 9. Restart Joplin (this is a bug, see https://github.com/individual-it/supernote-joplin/issues/12)
 10. Wait and pray
 
+## Force Sync
+Existing notes will not be rewritten (also not by new features) except if the note is updated on the Supernote device.
+So to resync a note, you can:
+- delete that particular note in Joplin
+- use the `Supernote Force Sync` command in the `Tools` menu.

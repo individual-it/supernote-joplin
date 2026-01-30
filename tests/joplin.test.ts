@@ -403,7 +403,7 @@ describe("writeNote", () => {
 })
 
 describe('createResources', () => {
-    const tmpFolder = '.tmp';
+    const tmpFolder = './tmp';
     beforeEach(async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(joplin.data.post).mockImplementationOnce((path, query, body): any => {
@@ -428,7 +428,7 @@ describe('createResources', () => {
     })
     it('creates a new resource for a single-page note', async () => {
         const sn = new SupernoteX(await readFileToUint8Array('./tests/fixtures/Single page.note'));
-        const createdResources = await createResources(sn, './tmp', 'Single page.note');
+        const createdResources = await createResources(sn, tmpFolder, 'Single page.note');
         expect(createdResources).toHaveLength(1);
         expect(createdResources[0].id).toBe("newly-created-resource-id")
         expect(createdResources[0].title).toBe("Single page.note-0.png")
@@ -439,7 +439,7 @@ describe('createResources', () => {
     })
     it('creates a new resource for every page of a multipage note', async () => {
         const sn = new SupernoteX(await readFileToUint8Array('./tests/fixtures/multiple pages.note'));
-        const createdResources = await createResources(sn, './tmp', 'multiple pages.note');
+        const createdResources = await createResources(sn, tmpFolder, 'multiple pages.note');
         expect(createdResources).toHaveLength(3);
         expect(createdResources[0].id).toBe("newly-created-resource-id")
         expect(createdResources[0].title).toBe("multiple pages.note-0.png")

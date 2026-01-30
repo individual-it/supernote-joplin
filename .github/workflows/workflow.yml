@@ -1,0 +1,37 @@
+name: workflow
+on:
+  pull_request:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: supernote-joplin
+      - name: install and build dependencies
+        uses: ./supernote-joplin/.github/install-build-dep
+      - name: test
+        run: |
+          cd supernote-joplin
+          npm ci
+          npm test
+
+  release:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    steps:
+      - name: install and build dependencies
+        uses: ./supernote-joplin/.github/actions/install-build-dep.yaml
+      - name: build
+        run: |
+          cd supernote-joplin
+          npm run dist
+      - name: publish
+        uses: softprops/action-gh-release@v2
+        with:
+           files: supernote-joplin/publish/net.individual-it.Supernote.jpl

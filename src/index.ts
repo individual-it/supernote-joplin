@@ -3,7 +3,6 @@ import {SettingItemSubType, SettingItemType, ToastType} from "../api/types";
 import {SupernoteX} from "supernote-typescript";
 import {
     createJoplinNotebookStructure, createNoteContent,
-    createResources,
     findMatchingNote,
     getDestinationRootNotebook,
     showMessage,
@@ -123,7 +122,7 @@ const run = async () => {
         }
 
         const reflow = await joplin.settings.value('auto-reflow-recognized-text');
-        const noteContent = createNoteContent(sn, tmpFolder, noteFile, reflow);
+        const noteContent = await createNoteContent(sn, tmpFolder, noteFile, reflow);
         await writeNote(destinationNotebookId, matchingNote, noteFile, noteContent)
     }
     try {

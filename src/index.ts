@@ -1,5 +1,5 @@
 import joplin from 'api';
-import {SettingItemSubType, SettingItemType, ToastType} from "../api/types";
+import {MenuItemLocation, SettingItemSubType, SettingItemType, ToastType} from "../api/types";
 import {SupernoteX} from "supernote-typescript";
 import {
     createJoplinNotebookStructure, createNoteContent,
@@ -81,7 +81,21 @@ const registerSettings = async () => {
     });
 };
 
-const run = async () => {
+const registerCommands = async () => {
+    await joplin.commands.register({
+        name: 'forceSync',
+        label: 'Supernote Force Sync',
+        execute: async () => {
+            clearInterval(syncInterval);
+            await run(true);
+            await resetSyncInterval();
+        },
+    });
+
+    await joplin.views.menuItems.create('forceSync', 'forceSync', MenuItemLocation.Tools);
+};
+
+const run = async (forceSync = false) => {
     const supernoteNotesDirectory = await joplin.settings.value('supernote-notes-directory');
     const destinationNotebookExternalLink = await joplin.settings.value('destination-notebook');
     const destinationRootNotebookId = await getDestinationRootNotebook(destinationNotebookExternalLink);
@@ -111,7 +125,7 @@ const run = async () => {
         const statsNoteFile = fs.statSync(fullPathOfNoteFile);
         const matchingNote = await findMatchingNote(destinationNotebookId, noteFile);
 
-        if (matchingNote && statsNoteFile.mtime.getTime() < matchingNote.updated_time) {
+        if (!forceSync && matchingNote && statsNoteFile.mtime.getTime() < matchingNote.updated_time) {
             console.info(`skipping ${noteFile} as file mtime is ${statsNoteFile.mtime.getTime()} and note updated time: ${matchingNote.updated_time} `);
             continue
         }
@@ -144,17 +158,20 @@ const run = async () => {
     }
 };
 
+const resetSyncInterval = async () => {
+    clearInterval(syncInterval);
+    const interval = await joplin.settings.value('sync-interval-seconds') * 1000;
+    syncInterval = setInterval(run, interval);
+};
 
 joplin.plugins.register({
     onStart: async function () {
         await registerSettings();
-        let interval = await joplin.settings.value('sync-interval-seconds') * 1000;
+        await registerCommands();
         await run();
-        syncInterval = setInterval(run, interval);
+        await resetSyncInterval();
         await joplin.settings.onChange(async () => {
-            clearInterval(syncInterval);
-            interval = await joplin.settings.value('sync-interval-seconds') * 1000;
-            syncInterval = setInterval(run, interval);
+            await resetSyncInterval();
         });
     }
 });

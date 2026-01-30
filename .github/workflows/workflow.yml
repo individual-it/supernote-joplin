@@ -18,6 +18,7 @@ jobs:
         run: |
           cd supernote-joplin
           npm ci
+          npm run lint
           npm test
 
   release:

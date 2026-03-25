@@ -125,7 +125,7 @@ const run = async (forceSync = false) => {
         const statsNoteFile = fs.statSync(fullPathOfNoteFile);
         const matchingNote = await findMatchingNote(destinationNotebookId, noteFile);
 
-        if (!forceSync && matchingNote && statsNoteFile.mtime.getTime() < matchingNote.updated_time) {
+        if (!forceSync && matchingNote && statsNoteFile.mtime.getTime() <= matchingNote.updated_time) {
             console.info(`skipping ${noteFile} as file mtime is ${statsNoteFile.mtime.getTime()} and note updated time: ${matchingNote.updated_time} `);
             continue
         }

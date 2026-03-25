@@ -15,6 +15,7 @@ import path from 'path';
 import os from 'os';
 
 let syncInterval: NodeJS.Timeout;
+let syncInProcess = false;
 
 const registerSettings = async () => {
     const sectionName = 'supernote';
@@ -96,6 +97,11 @@ const registerCommands = async () => {
 };
 
 const run = async (forceSync = false) => {
+    if (syncInProcess) {
+        console.info('Supernote Sync still runs, we have to wait ...');
+        return;
+    }
+    syncInProcess = true;
     const supernoteNotesDirectory = await joplin.settings.value('supernote-notes-directory');
     const destinationNotebookExternalLink = await joplin.settings.value('destination-notebook');
     const destinationRootNotebookId = await getDestinationRootNotebook(destinationNotebookExternalLink);
@@ -157,6 +163,7 @@ const run = async (forceSync = false) => {
     } catch (e) {
         console.error(e);
     }
+    syncInProcess = false;
 };
 
 const resetSyncInterval = async () => {

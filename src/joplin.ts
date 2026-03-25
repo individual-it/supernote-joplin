@@ -278,7 +278,7 @@ export async function createNoteContent(
             noteContent += recognizedText + "\n\n";
         }
     }
-    let response: { items: [Resource]; has_more: boolean; };
+    let response: { items: Resource[]; has_more: boolean; };
     let existingResources: Resource[] = [];
     let pageNum = 1;
     do {

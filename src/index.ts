@@ -101,69 +101,70 @@ const run = async (forceSync = false) => {
         console.info('Supernote Sync still runs, we have to wait ...');
         return;
     }
-    syncInProcess = true;
-    const supernoteNotesDirectory = await joplin.settings.value('supernote-notes-directory');
-    const destinationNotebookExternalLink = await joplin.settings.value('destination-notebook');
-    const destinationRootNotebookId = await getDestinationRootNotebook(destinationNotebookExternalLink);
-
-
-    console.info('Supernote plugin started!');
-    console.info('Notes are stored in: ' + supernoteNotesDirectory);
-    if (!fs.existsSync(supernoteNotesDirectory)) {
-        const message = 'The supernote directory does not exist!'
-        await showMessage(
-            ToastType.Error,
-            message
-        );
-        throw Error(message);
-    }
-
-    const files = await fs.promises.readdir(supernoteNotesDirectory, {recursive: true});
-    const noteFiles = files.filter(file => file.endsWith('.note'));
-
-    console.info(`found ${noteFiles.length} files`);
-    console.info(noteFiles);
-
     const tmpFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'joplin-supernote-sync'));
-    for (const noteFile of noteFiles) {
-        const destinationNotebookId = await createJoplinNotebookStructure(noteFile, destinationRootNotebookId);
-        const fullPathOfNoteFile = path.join(supernoteNotesDirectory, noteFile)
-        const statsNoteFile = fs.statSync(fullPathOfNoteFile);
-        const matchingNote = await findMatchingNote(destinationNotebookId, noteFile);
-
-        if (!forceSync && matchingNote && statsNoteFile.mtime.getTime() <= matchingNote.updated_time) {
-            console.info(`skipping ${noteFile} as file mtime is ${statsNoteFile.mtime.getTime()} and note updated time: ${matchingNote.updated_time} `);
-            continue
-        }
-
-        let toastMessage = `syncing file '${fullPathOfNoteFile}'`
-        if (matchingNote) {
-            toastMessage += ` - to note '${matchingNote.title}'`;
-        }
-        await showMessage(ToastType.Info, toastMessage);
-        let sn: SupernoteX;
-        try {
-            sn = new SupernoteX(await readFileToUint8Array(fullPathOfNoteFile));
-        } catch (e) {
-            const errorMessage = `could not parse '${fullPathOfNoteFile}'`
-            await showMessage(ToastType.Error, errorMessage)
-            console.error(errorMessage)
-            console.error(e)
-            continue
-        }
-
-        const reflow = await joplin.settings.value('auto-reflow-recognized-text');
-        const noteContent = await createNoteContent(sn, tmpFolder, noteFile, reflow);
-        const noteId = await writeNote(destinationNotebookId, matchingNote, noteFile, noteContent)
-        const tag = await joplin.settings.value('tag');
-        await tagNote(noteId, tag);
-    }
     try {
-        fs.rmSync(tmpFolder, {recursive: true, force: true});
-    } catch (e) {
-        console.error(e);
+        syncInProcess = true;
+        const supernoteNotesDirectory = await joplin.settings.value('supernote-notes-directory');
+        const destinationNotebookExternalLink = await joplin.settings.value('destination-notebook');
+        const destinationRootNotebookId = await getDestinationRootNotebook(destinationNotebookExternalLink);
+        console.info('Supernote plugin started!');
+        console.info('Notes are stored in: ' + supernoteNotesDirectory);
+        if (!fs.existsSync(supernoteNotesDirectory)) {
+            const message = 'The supernote directory does not exist!'
+            await showMessage(
+                ToastType.Error,
+                message
+            );
+            throw Error(message);
+        }
+
+        const files = await fs.promises.readdir(supernoteNotesDirectory, {recursive: true});
+        const noteFiles = files.filter(file => file.endsWith('.note'));
+
+        console.info(`found ${noteFiles.length} files`);
+        console.info(noteFiles);
+
+        for (const noteFile of noteFiles) {
+            const destinationNotebookId = await createJoplinNotebookStructure(noteFile, destinationRootNotebookId);
+            const fullPathOfNoteFile = path.join(supernoteNotesDirectory, noteFile)
+            const statsNoteFile = fs.statSync(fullPathOfNoteFile);
+            const matchingNote = await findMatchingNote(destinationNotebookId, noteFile);
+
+            if (!forceSync && matchingNote && statsNoteFile.mtime.getTime() <= matchingNote.updated_time) {
+                console.info(`skipping ${noteFile} as file mtime is ${statsNoteFile.mtime.getTime()} and note updated time: ${matchingNote.updated_time} `);
+                continue
+            }
+
+            let toastMessage = `syncing file '${fullPathOfNoteFile}'`
+            if (matchingNote) {
+                toastMessage += ` - to note '${matchingNote.title}'`;
+            }
+            await showMessage(ToastType.Info, toastMessage);
+            let sn: SupernoteX;
+            try {
+                sn = new SupernoteX(await readFileToUint8Array(fullPathOfNoteFile));
+            } catch (e) {
+                const errorMessage = `could not parse '${fullPathOfNoteFile}'`
+                await showMessage(ToastType.Error, errorMessage)
+                console.error(errorMessage)
+                console.error(e)
+                continue
+            }
+
+            const reflow = await joplin.settings.value('auto-reflow-recognized-text');
+            const noteContent = await createNoteContent(sn, tmpFolder, noteFile, reflow);
+            const noteId = await writeNote(destinationNotebookId, matchingNote, noteFile, noteContent)
+            const tag = await joplin.settings.value('tag');
+            await tagNote(noteId, tag);
+        }
+    } finally {
+        syncInProcess = false
+        try {
+            fs.rmSync(tmpFolder, {recursive: true, force: true});
+        } catch (e) {
+            console.error(e);
+        }
     }
-    syncInProcess = false;
 };
 
 const resetSyncInterval = async () => {

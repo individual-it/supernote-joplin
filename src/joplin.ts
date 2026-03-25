@@ -24,6 +24,16 @@ export interface Tag {
     title: string;
 }
 
+export interface Resource {
+    id: string,
+    title: string,
+    filename: string,
+    created_time: number,
+    user_data: string,
+    size: number
+}
+
+
 export async function getDestinationRootNotebook(destinationNotebookExternalLink: string): Promise<string> {
     const destinationNotebookURL = url.parse(destinationNotebookExternalLink)
     const destinationNotebook = querystring.parse(destinationNotebookURL.query);
@@ -128,7 +138,14 @@ export async function writeNote(destinationNotebookId: string, matchingNote, not
         } while (response.has_more)
         for (const resource of existingResources) {
             const associatedNotes = await joplin.data.get(['resources', resource.id, 'notes']);
-            if (associatedNotes.items.length === 1 && associatedNotes.items[0].id === matchingNote.id) {
+
+            // only delete the resource if it's not used in any other note nor is used in the newly created body
+            if (
+                associatedNotes.items.length === 1 &&
+                associatedNotes.items[0].id === matchingNote.id &&
+                !body.includes(resource.id))
+            {
+                console.log("deleting " + resource.id);
                 await joplin.data.delete(['resources', resource.id]);
             }
         }
@@ -140,33 +157,69 @@ export async function writeNote(destinationNotebookId: string, matchingNote, not
     }
 }
 
-export async function createResources(sn: SupernoteX, tmpFolder: string, noteFile: string) {
+export async function createResources(existingResources: Resource[], sn: SupernoteX, tmpFolder: string, noteFile: string) {
     const images = await toImage(sn)
     const createdResources = [];
     for await (const [index, image] of images.entries()) {
         const fileName = `${noteFile}-${index}.png`;
-        const fullOutputPath = path.join(tmpFolder, fileName);
+        let foundMatchingExistingResource: boolean = false;
+        let pngImage: Uint8Array | null = null;
+        let pngImageBuffer: Buffer;
 
-        const outputDirName = path.dirname(fullOutputPath);
-        if (!fs.existsSync(outputDirName)) {
-            fs.mkdirSync(outputDirName, {recursive: true});
+        for await (const resource of existingResources) {
+            if (!/^.*\.note.*\.png$/.test(resource.title)) {
+                continue;
+            }
+
+            // make sure the image is only created once
+            if (pngImage === null) {
+                pngImage = imagejs.encodePng(image);
+                pngImageBuffer = Buffer.from(pngImage)
+            }
+            console.log("looking if there is a resource matching " + fileName);
+            try {
+                const file = await joplin.data.get(['resources', resource.id, 'file']);
+                if (pngImage.byteLength === file.body.byteLength && pngImageBuffer.equals(Buffer.from(file.body))) {
+                    console.log("reusing " + resource.id);
+                    foundMatchingExistingResource = true;
+
+                    // this will not really change the resource, just to have a correct title when writing the note
+                    resource.title = fileName;
+
+                    createdResources.push(resource);
+                    break;
+                }
+            } catch (e) {
+                // for some reason the file could not be read,
+                // we don't care
+                // NOP
+            }
         }
-        try {
-            imagejs.writeSync(fullOutputPath, image)
-        } catch (e) {
-            console.error(e)
+        if (!foundMatchingExistingResource) {
+            console.log("we need to create a new resource for " + fileName);
+            const fullOutputPath = path.join(tmpFolder, fileName);
+
+            const outputDirName = path.dirname(fullOutputPath);
+            if (!fs.existsSync(outputDirName)) {
+                fs.mkdirSync(outputDirName, {recursive: true});
+            }
+            try {
+                imagejs.writeSync(fullOutputPath, image)
+            } catch (e) {
+                console.error(e)
+            }
+            const resource = await joplin.data.post(
+                ["resources"],
+                null,
+                {title: fileName}, // Resource metadata
+                [
+                    {
+                        path: fullOutputPath, // Actual file
+                    },
+                ]
+            );
+            createdResources.push(resource);
         }
-        const resource = await joplin.data.post(
-            ["resources"],
-            null,
-            {title: fileName}, // Resource metadata
-            [
-                {
-                    path: fullOutputPath, // Actual file
-                },
-            ]
-        );
-        createdResources.push(resource);
     }
     return createdResources;
 }
@@ -209,7 +262,9 @@ export async function tagNote(noteId: string, tag: string) {
     }
 }
 
-export async function createNoteContent(sn: SupernoteX, tmpFolder: string, noteFile: string, reflow: boolean) {
+export async function createNoteContent(
+    sn: SupernoteX, tmpFolder: string, noteFile: string, reflow: boolean
+) {
     let noteContent = "";
     for (const page of sn.pages) {
         let recognizedText = "";
@@ -222,7 +277,15 @@ export async function createNoteContent(sn: SupernoteX, tmpFolder: string, noteF
             noteContent += recognizedText + "\n\n";
         }
     }
-    for (const resource of await createResources(sn, tmpFolder, noteFile)) {
+    let response: { items: [Resource]; has_more: boolean; };
+    let existingResources: Resource[] = [];
+    let pageNum = 1;
+    do {
+        response = await joplin.data.get(['resources'], {page: pageNum++});
+        existingResources = [...response.items, ...existingResources]
+    } while (response.has_more)
+
+    for (const resource of await createResources(existingResources, sn, tmpFolder, noteFile)) {
         noteContent += `![${resource.title}](:/${resource.id})\n`;
     }
     return noteContent;

@@ -4,7 +4,7 @@ import {SupernoteX} from "supernote-typescript";
 import {
     createJoplinNotebookStructure, createNoteContent,
     findMatchingNote,
-    getDestinationRootNotebook,
+    getDestinationRootNotebook, Resource,
     showMessage, tagNote,
     writeNote
 } from "./joplin";
@@ -145,6 +145,7 @@ const run = async (forceSync = false) => {
             console.error(e)
             continue
         }
+
         const reflow = await joplin.settings.value('auto-reflow-recognized-text');
         const noteContent = await createNoteContent(sn, tmpFolder, noteFile, reflow);
         const noteId = await writeNote(destinationNotebookId, matchingNote, noteFile, noteContent)

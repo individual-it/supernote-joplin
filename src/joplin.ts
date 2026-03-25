@@ -189,6 +189,7 @@ export async function createResources(existingResources: Resource[], sn: Superno
                     createdResources.push(resource);
                     break;
                 }
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
             } catch (e) {
                 // for some reason the file could not be read,
                 // we don't care

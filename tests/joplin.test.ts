@@ -11,7 +11,6 @@ import {
 import joplin from "../api";
 import {SupernoteX} from "../../supernote-typescript/src";
 import {readFileToUint8Array} from "../src/helpers";
-import {fsReadFile} from "ts-loader/dist/utils";
 
 vi.mock('../api', () => {
     return {
@@ -581,7 +580,8 @@ describe('createNoteContent', () => {
                 return {id: "newly-created-resource-id", title: body.title};
             }
         )
-        vi.mocked(joplin.data.get).mockImplementationOnce(async (path): Promise<any> => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.mocked(joplin.data.get).mockImplementationOnce(async (): Promise<any> => {
                 return {
                     "items": [],
                     has_more: false

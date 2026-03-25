@@ -4,7 +4,7 @@ import {SupernoteX} from "supernote-typescript";
 import {
     createJoplinNotebookStructure, createNoteContent,
     findMatchingNote,
-    getDestinationRootNotebook, Resource,
+    getDestinationRootNotebook,
     showMessage, tagNote,
     writeNote
 } from "./joplin";

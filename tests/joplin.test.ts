@@ -517,7 +517,7 @@ describe('createResources', () => {
     })
     it('does not create new resources when existing ones are found', async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(joplin.data.get).mockImplementationOnce(async (path): Promise<any> => {
+        vi.mocked(joplin.data.get).mockImplementation(async (path): Promise<any> => {
                 if (path[0] === 'resources' && path[1] === 'existing resource') {
                     return {
                         id: "existing resource",
@@ -539,18 +539,14 @@ describe('createResources', () => {
         )
         const sn = new SupernoteX(await readFileToUint8Array('./tests/fixtures/multiple pages.note'));
         const existingResources: Resource[] = [
-            {id: 'something', title: 'some attachment', filename: '', created_time: 0, size: 11, user_data: ''},
-            {id: 'something', title: 'some other attachment', filename: '', created_time: 0, size: 11, user_data: ''},
-            {id: 'existing resource', title: 'a file.note.png', filename: '', created_time: 0, size: 11, user_data: ''},
+            {id: 'something', title: 'some attachment', size: 11},
+            {id: 'existing resource with size matching, but not content', title: 'some other attachment', size: 50179},
+            {id: 'existing resource', title: 'a file.note.png', size: 50179},
             {
                 id: 'existing page 3',
                 title: 'page 3 existing.note.png',
-                filename: '',
-                created_time: 0,
-                size: 11,
-                user_data: ''
+                size: 51587
             },
-
         ]
         const createdResources = await createResources(
             existingResources, sn, tmpFolder, 'multiple pages.note'
@@ -560,15 +556,15 @@ describe('createResources', () => {
         expect(createdResources[0].title).toBe("multiple pages.note-0.png")
         expect(createdResources[1].id).toBe("newly-created-resource-id")
         expect(createdResources[1].title).toBe("multiple pages.note-1.png")
-        expect(createdResources[2].id).toBe("second-created-resource-id")
+        expect(createdResources[2].id).toBe("existing page 3")
         expect(createdResources[2].title).toBe("multiple pages.note-2.png")
         expect(joplin.data.post).toHaveBeenNthCalledWith(1,
             ['resources'], null, {title: 'multiple pages.note-1.png'}, [{path: 'tmp/multiple pages.note-1.png'}]
         );
-        expect(joplin.data.post).toHaveBeenNthCalledWith(2,
-            ['resources'], null, {title: 'multiple pages.note-2.png'}, [{path: 'tmp/multiple pages.note-2.png'}]
-        );
-        expect(joplin.data.post).toHaveBeenCalledTimes(2);
+        // expect(joplin.data.post).toHaveBeenNthCalledWith(2,
+        //     ['resources'], null, {title: 'multiple pages.note-2.png'}, [{path: 'tmp/multiple pages.note-2.png'}]
+        // );
+        expect(joplin.data.post).toHaveBeenCalledTimes(1);
     })
 })
 

@@ -27,9 +27,6 @@ export interface Tag {
 export interface Resource {
     id: string,
     title: string,
-    filename: string,
-    created_time: number,
-    user_data: string,
     size: number
 }
 
@@ -157,9 +154,9 @@ export async function writeNote(destinationNotebookId: string, matchingNote, not
     }
 }
 
-export async function createResources(existingResources: Resource[], sn: SupernoteX, tmpFolder: string, noteFile: string) {
+export async function createResources(existingResources: Resource[], sn: SupernoteX, tmpFolder: string, noteFile: string): Promise<Resource[]> {
     const images = await toImage(sn)
-    const createdResources = [];
+    const createdResources: Resource[] = [];
     for await (const [index, image] of images.entries()) {
         const fileName = `${noteFile}-${index}.png`;
         let foundMatchingExistingResource: boolean = false;
@@ -176,10 +173,12 @@ export async function createResources(existingResources: Resource[], sn: Superno
                 pngImage = imagejs.encodePng(image);
                 pngImageBuffer = Buffer.from(pngImage)
             }
-            console.log("looking if there is a resource matching " + fileName);
+            if (resource.size !== pngImage.byteLength) {
+                continue;
+            }
             try {
                 const file = await joplin.data.get(['resources', resource.id, 'file']);
-                if (pngImage.byteLength === file.body.byteLength && pngImageBuffer.equals(Buffer.from(file.body))) {
+                if (pngImageBuffer.equals(Buffer.from(file.body))) {
                     console.log("reusing " + resource.id);
                     foundMatchingExistingResource = true;
 
@@ -209,7 +208,7 @@ export async function createResources(existingResources: Resource[], sn: Superno
             } catch (e) {
                 console.error(e)
             }
-            const resource = await joplin.data.post(
+            const resource: Resource = await joplin.data.post(
                 ["resources"],
                 null,
                 {title: fileName}, // Resource metadata
@@ -282,7 +281,7 @@ export async function createNoteContent(
     let existingResources: Resource[] = [];
     let pageNum = 1;
     do {
-        response = await joplin.data.get(['resources'], {page: pageNum++});
+        response = await joplin.data.get(['resources'], {page: pageNum++, fields: ['id', 'title', 'size'] });
         existingResources = [...response.items, ...existingResources]
     } while (response.has_more)
 
